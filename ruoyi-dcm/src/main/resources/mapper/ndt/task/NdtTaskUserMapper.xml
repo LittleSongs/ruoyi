@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.task.mapper.NdtTaskUserMapper">
+    <resultMap type="NdtTaskUser" id="NdtTaskUserResult">
+        <id property="id" column="id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="nickName" column="nick_name"/>
+        <result property="taskRole" column="task_role"/>
+        <result property="canEvaluate" column="can_evaluate"/>
+        <result property="canUpload" column="can_upload"/>
+        <result property="canView" column="can_view"/>
+        <result property="assignedBy" column="assigned_by"/>
+        <result property="assignedTime" column="assigned_time"/>
+    </resultMap>
+
+    <sql id="selectNdtTaskUserVo">
+        select tu.id, tu.task_id, tu.user_id, u.user_name, u.nick_name,
+               tu.task_role, tu.can_evaluate, tu.can_upload, tu.can_view,
+               tu.assigned_by, tu.assigned_time
+          from ndt_task_user tu
+          left join sys_user u on u.user_id = tu.user_id
+    </sql>
+
+    <select id="selectNdtTaskUserList" parameterType="NdtTaskUser" resultMap="NdtTaskUserResult">
+        <include refid="selectNdtTaskUserVo"/>
+        <where>
+            <if test="taskId != null">and tu.task_id = #{taskId}</if>
+            <if test="userId != null">and tu.user_id = #{userId}</if>
+            <if test="taskRole != null and taskRole != ''">and tu.task_role = #{taskRole}</if>
+        </where>
+        order by tu.task_id desc, tu.id
+    </select>
+
+    <select id="selectNdtTaskUsersByTaskId" parameterType="Long" resultMap="NdtTaskUserResult">
+        <include refid="selectNdtTaskUserVo"/>
+        where tu.task_id = #{taskId}
+        order by tu.id
+    </select>
+
+    <select id="countTaskPermission" resultType="int">
+        select count(1)
+          from ndt_task_user
+         where task_id = #{taskId}
+           and user_id = #{userId}
+           and ${permissionField} = '1'
+    </select>
+
+    <select id="countTaskRole" resultType="int">
+        select count(1)
+          from ndt_task_user
+         where task_id = #{taskId}
+           and user_id = #{userId}
+           and task_role = #{taskRole}
+    </select>
+
+    <insert id="insertNdtTaskUser" parameterType="NdtTaskUser" useGeneratedKeys="true" keyProperty="id">
+        insert into ndt_task_user
+        (task_id, user_id, task_role, can_evaluate, can_upload, can_view, assigned_by, assigned_time)
+        values
+        (#{taskId}, #{userId}, #{taskRole}, #{canEvaluate}, #{canUpload}, #{canView}, #{assignedBy}, sysdate())
+    </insert>
+
+    <delete id="deleteNdtTaskUsersByTaskId" parameterType="Long">
+        delete from ndt_task_user where task_id = #{taskId}
+    </delete>
+</mapper>

@@ -7,7 +7,7 @@ ruoyi:
   # 版权年份
   copyrightYear: 2026
   # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: D:/ruoyi/uploadPath
+  profile: /Users/leo/code/RuoYi-profile
   # 获取ip地址开关
   addressEnabled: false
   # 验证码类型 math 数字计算 char 字符验证
@@ -145,3 +145,24 @@ xss:
   excludes: /system/notice
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
+
+# DICOM归档与影像查看配置
+dcm:
+  orthanc:
+    base-url: http://localhost:8042
+    username:
+    password:
+  ohif:
+    viewer-url: http://localhost:3000/viewer
+
+# 无损检测 DICOM 管理配置
+ndt:
+  orthanc:
+    base-url: http://localhost:8042
+    username:
+    password:
+  ohif:
+    viewer-url: http://localhost:3000/viewer
+  security:
+    # 中科检测公司根部门ID；该部门及其子部门视为公司内部部门，其余部门按客户部门处理
+    company-root-dept-id: 100

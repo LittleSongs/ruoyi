@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.inspector.mapper.NdtInspectorProfileMapper">
+    <resultMap type="NdtInspectorProfile" id="NdtInspectorProfileResult">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="nickName" column="nick_name"/>
+        <result property="inspectorNo" column="inspector_no"/>
+        <result property="certificateNo" column="certificate_no"/>
+        <result property="certificateName" column="certificate_name"/>
+        <result property="qualificationLevel" column="qualification_level"/>
+        <result property="issueDate" column="issue_date"/>
+        <result property="expireDate" column="expire_date"/>
+        <result property="certificateFile" column="certificate_file"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectNdtInspectorProfileVo">
+        select p.id, p.user_id, u.user_name, u.nick_name, p.inspector_no, p.certificate_no,
+               p.certificate_name, p.qualification_level, p.issue_date, p.expire_date,
+               p.certificate_file, p.remark, p.create_by, p.create_time, p.update_by,
+               p.update_time, p.del_flag
+          from ndt_inspector_profile p
+          left join sys_user u on u.user_id = p.user_id
+    </sql>
+
+    <select id="selectNdtInspectorProfileList" parameterType="NdtInspectorProfile" resultMap="NdtInspectorProfileResult">
+        <include refid="selectNdtInspectorProfileVo"/>
+        <where>
+            p.del_flag = '0'
+            <if test="userId != null">and p.user_id = #{userId}</if>
+            <if test="userName != null and userName != ''">and u.user_name like concat('%', #{userName}, '%')</if>
+            <if test="inspectorNo != null and inspectorNo != ''">and p.inspector_no like concat('%', #{inspectorNo}, '%')</if>
+            <if test="certificateNo != null and certificateNo != ''">and p.certificate_no like concat('%', #{certificateNo}, '%')</if>
+            <if test="qualificationLevel != null and qualificationLevel != ''">and p.qualification_level = #{qualificationLevel}</if>
+        </where>
+        order by p.id desc
+    </select>
+
+    <select id="selectNdtInspectorProfileById" parameterType="Long" resultMap="NdtInspectorProfileResult">
+        <include refid="selectNdtInspectorProfileVo"/>
+        where p.id = #{id} and p.del_flag = '0'
+    </select>
+
+    <select id="selectNdtInspectorProfileByUserId" parameterType="Long" resultMap="NdtInspectorProfileResult">
+        <include refid="selectNdtInspectorProfileVo"/>
+        where p.user_id = #{userId} and p.del_flag = '0' limit 1
+    </select>
+
+    <insert id="insertNdtInspectorProfile" parameterType="NdtInspectorProfile" useGeneratedKeys="true" keyProperty="id">
+        insert into ndt_inspector_profile
+        (user_id, inspector_no, certificate_no, certificate_name, qualification_level,
+         issue_date, expire_date, certificate_file, remark, create_by, create_time,
+         update_by, update_time, del_flag)
+        values
+        (#{userId}, #{inspectorNo}, #{certificateNo}, #{certificateName}, #{qualificationLevel},
+         #{issueDate}, #{expireDate}, #{certificateFile}, #{remark}, #{createBy}, sysdate(),
+         #{updateBy}, sysdate(), #{delFlag})
+    </insert>
+
+    <update id="updateNdtInspectorProfile" parameterType="NdtInspectorProfile">
+        update ndt_inspector_profile
+           set inspector_no = #{inspectorNo},
+               certificate_no = #{certificateNo},
+               certificate_name = #{certificateName},
+               qualification_level = #{qualificationLevel},
+               issue_date = #{issueDate},
+               expire_date = #{expireDate},
+               certificate_file = #{certificateFile},
+               remark = #{remark},
+               update_by = #{updateBy},
+               update_time = sysdate(),
+               del_flag = #{delFlag}
+         where id = #{id}
+    </update>
+
+    <update id="softDeleteNdtInspectorProfileByIds" parameterType="Long">
+        update ndt_inspector_profile set del_flag = '2', update_time = sysdate()
+        where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </update>
+</mapper>

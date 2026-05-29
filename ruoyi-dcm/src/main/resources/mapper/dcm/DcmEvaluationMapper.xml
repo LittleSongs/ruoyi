@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.dcm.mapper.DcmEvaluationMapper">
+    <resultMap type="DcmEvaluation" id="DcmEvaluationResult">
+        <id property="id" column="id"/>
+        <result property="studyId" column="study_id"/>
+        <result property="seriesId" column="series_id"/>
+        <result property="instanceId" column="instance_id"/>
+        <result property="evaluatorId" column="evaluator_id"/>
+        <result property="evaluatorName" column="evaluator_name"/>
+        <result property="imageQualityResult" column="image_quality_result"/>
+        <result property="defectResult" column="defect_result"/>
+        <result property="defectLevel" column="defect_level"/>
+        <result property="defectDescription" column="defect_description"/>
+        <result property="evaluationConclusion" column="evaluation_conclusion"/>
+        <result property="evaluationStatus" column="evaluation_status"/>
+        <result property="evaluationTime" column="evaluation_time"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="studyInstanceUid" column="study_instance_uid"/>
+        <result property="patientName" column="patient_name"/>
+        <result property="studyDescription" column="study_description"/>
+    </resultMap>
+    <sql id="selectDcmEvaluationVo">
+        select e.id, e.study_id, e.series_id, e.instance_id, e.evaluator_id, e.evaluator_name,
+               e.image_quality_result, e.defect_result, e.defect_level, e.defect_description,
+               e.evaluation_conclusion, e.evaluation_status, e.evaluation_time, e.remark,
+               e.create_by, e.create_time, e.update_by, e.update_time, e.del_flag,
+               s.study_instance_uid, s.patient_name, s.study_description
+          from dcm_evaluation e
+          join dcm_study s on s.id = e.study_id
+    </sql>
+    <select id="selectDcmEvaluationList" parameterType="DcmEvaluation" resultMap="DcmEvaluationResult">
+        <include refid="selectDcmEvaluationVo"/>
+        <where>
+            e.del_flag = '0' and s.del_flag = '0'
+            <if test="studyId != null">and e.study_id = #{studyId}</if>
+            <if test="evaluationStatus != null and evaluationStatus != ''">and e.evaluation_status = #{evaluationStatus}</if>
+            <if test="patientName != null and patientName != ''">and s.patient_name like concat('%', #{patientName}, '%')</if>
+        </where>
+        order by e.update_time desc, e.id desc
+    </select>
+    <select id="selectDcmEvaluationById" parameterType="Long" resultMap="DcmEvaluationResult">
+        <include refid="selectDcmEvaluationVo"/>
+        where e.id = #{id} and e.del_flag = '0' and s.del_flag = '0'
+    </select>
+    <select id="selectDcmEvaluationByStudyId" parameterType="Long" resultMap="DcmEvaluationResult">
+        <include refid="selectDcmEvaluationVo"/>
+        where e.study_id = #{studyId} and e.del_flag = '0' and s.del_flag = '0'
+    </select>
+    <select id="selectExistingDcmEvaluationByStudyId" parameterType="Long" resultMap="DcmEvaluationResult">
+        <include refid="selectDcmEvaluationVo"/>
+        where e.study_id = #{studyId} limit 1
+    </select>
+    <insert id="insertDcmEvaluation" parameterType="DcmEvaluation" useGeneratedKeys="true" keyProperty="id">
+        insert into dcm_evaluation
+        (study_id, series_id, instance_id, evaluator_id, evaluator_name, image_quality_result,
+         defect_result, defect_level, defect_description, evaluation_conclusion, evaluation_status,
+         evaluation_time, remark, create_by, create_time, update_by, update_time, del_flag)
+        values
+        (#{studyId}, #{seriesId}, #{instanceId}, #{evaluatorId}, #{evaluatorName}, #{imageQualityResult},
+         #{defectResult}, #{defectLevel}, #{defectDescription}, #{evaluationConclusion}, #{evaluationStatus},
+         #{evaluationTime}, #{remark}, #{createBy}, sysdate(), #{updateBy}, sysdate(), #{delFlag})
+    </insert>
+    <update id="updateDcmEvaluation" parameterType="DcmEvaluation">
+        update dcm_evaluation
+           set series_id = #{seriesId}, instance_id = #{instanceId},
+               evaluator_id = #{evaluatorId}, evaluator_name = #{evaluatorName},
+               image_quality_result = #{imageQualityResult}, defect_result = #{defectResult},
+               defect_level = #{defectLevel}, defect_description = #{defectDescription},
+               evaluation_conclusion = #{evaluationConclusion}, evaluation_status = #{evaluationStatus},
+               evaluation_time = #{evaluationTime}, remark = #{remark},
+               update_by = #{updateBy}, update_time = sysdate(), del_flag = #{delFlag}
+         where id = #{id}
+    </update>
+    <update id="softDeleteDcmEvaluationByIds" parameterType="Long">
+        update dcm_evaluation set del_flag = '2', update_time = sysdate()
+        where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </update>
+    <update id="softDeleteDcmEvaluationByStudyIds" parameterType="Long">
+        update dcm_evaluation set del_flag = '2', update_time = sysdate()
+        where study_id in
+        <foreach collection="array" item="studyId" open="(" separator="," close=")">#{studyId}</foreach>
+    </update>
+</mapper>

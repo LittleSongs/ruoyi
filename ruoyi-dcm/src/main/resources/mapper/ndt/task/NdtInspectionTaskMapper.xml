@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.task.mapper.NdtInspectionTaskMapper">
+    <resultMap type="NdtInspectionTask" id="NdtInspectionTaskResult">
+        <id property="id" column="id"/>
+        <result property="taskNo" column="task_no"/>
+        <result property="taskName" column="task_name"/>
+        <result property="workpieceName" column="workpiece_name"/>
+        <result property="customerDeptId" column="customer_dept_id"/>
+        <result property="customerDeptName" column="customer_dept_name"/>
+        <result property="studyInstanceUid" column="study_instance_uid"/>
+        <result property="orthancStudyId" column="orthanc_study_id"/>
+        <result property="status" column="status"/>
+        <result property="isPublicSample" column="is_public_sample"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectNdtInspectionTaskVo">
+        select t.id, t.task_no, t.task_name, t.workpiece_name, t.customer_dept_id,
+               d.dept_name as customer_dept_name, t.study_instance_uid, t.orthanc_study_id,
+               t.status, t.is_public_sample, t.remark, t.create_by, t.create_time,
+               t.update_by, t.update_time, t.del_flag
+          from ndt_inspection_task t
+          left join sys_dept d on d.dept_id = t.customer_dept_id
+    </sql>
+
+    <select id="selectNdtInspectionTaskList" parameterType="NdtInspectionTask" resultMap="NdtInspectionTaskResult">
+        <include refid="selectNdtInspectionTaskVo"/>
+        <where>
+            t.del_flag = '0'
+            <if test="taskNo != null and taskNo != ''">and t.task_no like concat('%', #{taskNo}, '%')</if>
+            <if test="taskName != null and taskName != ''">and t.task_name like concat('%', #{taskName}, '%')</if>
+            <if test="workpieceName != null and workpieceName != ''">and t.workpiece_name like concat('%', #{workpieceName}, '%')</if>
+            <if test="customerDeptId != null">and t.customer_dept_id = #{customerDeptId}</if>
+            <if test="studyInstanceUid != null and studyInstanceUid != ''">and t.study_instance_uid like concat('%', #{studyInstanceUid}, '%')</if>
+            <if test="status != null and status != ''">and t.status = #{status}</if>
+            <if test="params.scopeType == 'ASSIGNED'">
+                and exists (
+                    select 1 from ndt_task_user tu
+                     where tu.task_id = t.id and tu.user_id = #{params.scopeUserId} and tu.can_view = '1'
+                )
+            </if>
+            <if test="params.scopeType == 'CUSTOMER_DEPT'">and t.customer_dept_id = #{params.scopeDeptId}</if>
+            <if test="params.scopeType == 'NONE'">and 1 = 0</if>
+        </where>
+        order by t.create_time desc, t.id desc
+    </select>
+
+    <select id="selectPublicNdtInspectionTaskList" parameterType="NdtInspectionTask" resultMap="NdtInspectionTaskResult">
+        <include refid="selectNdtInspectionTaskVo"/>
+        <where>
+            t.del_flag = '0' and t.is_public_sample = '1'
+            <if test="taskName != null and taskName != ''">and t.task_name like concat('%', #{taskName}, '%')</if>
+        </where>
+        order by t.create_time desc, t.id desc
+    </select>
+
+    <select id="selectNdtInspectionTaskById" parameterType="Long" resultMap="NdtInspectionTaskResult">
+        <include refid="selectNdtInspectionTaskVo"/>
+        where t.id = #{id} and t.del_flag = '0'
+    </select>
+
+    <select id="selectNdtInspectionTaskByTaskNo" parameterType="String" resultMap="NdtInspectionTaskResult">
+        <include refid="selectNdtInspectionTaskVo"/>
+        where t.task_no = #{taskNo} and t.del_flag = '0' limit 1
+    </select>
+
+    <insert id="insertNdtInspectionTask" parameterType="NdtInspectionTask" useGeneratedKeys="true" keyProperty="id">
+        insert into ndt_inspection_task
+        (task_no, task_name, workpiece_name, customer_dept_id, study_instance_uid, orthanc_study_id,
+         status, is_public_sample, remark, create_by, create_time, update_by, update_time, del_flag)
+        values
+        (#{taskNo}, #{taskName}, #{workpieceName}, #{customerDeptId}, #{studyInstanceUid}, #{orthancStudyId},
+         #{status}, #{isPublicSample}, #{remark}, #{createBy}, sysdate(), #{updateBy}, sysdate(), #{delFlag})
+    </insert>
+
+    <update id="updateNdtInspectionTask" parameterType="NdtInspectionTask">
+        update ndt_inspection_task
+           set task_name = #{taskName},
+               workpiece_name = #{workpieceName},
+               customer_dept_id = #{customerDeptId},
+               study_instance_uid = #{studyInstanceUid},
+               orthanc_study_id = #{orthancStudyId},
+               status = #{status},
+               is_public_sample = #{isPublicSample},
+               remark = #{remark},
+               update_by = #{updateBy},
+               update_time = sysdate(),
+               del_flag = #{delFlag}
+         where id = #{id}
+    </update>
+
+    <update id="updateNdtInspectionTaskStudy">
+        update ndt_inspection_task
+           set study_instance_uid = #{studyInstanceUid},
+               orthanc_study_id = #{orthancStudyId},
+               status = #{status},
+               update_by = #{updateBy},
+               update_time = sysdate()
+         where id = #{id} and del_flag = '0'
+    </update>
+
+    <update id="updateNdtInspectionTaskStatus">
+        update ndt_inspection_task
+           set status = #{status}, update_by = #{updateBy}, update_time = sysdate()
+         where id = #{id} and del_flag = '0'
+    </update>
+
+    <update id="softDeleteNdtInspectionTaskByIds" parameterType="Long">
+        update ndt_inspection_task set del_flag = '2', update_time = sysdate()
+        where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </update>
+</mapper>

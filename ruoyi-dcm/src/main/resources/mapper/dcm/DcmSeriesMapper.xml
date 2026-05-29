@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.dcm.mapper.DcmSeriesMapper">
+    <resultMap type="DcmSeries" id="DcmSeriesResult">
+        <id property="id" column="id"/>
+        <result property="studyId" column="study_id"/>
+        <result property="orthancSeriesId" column="orthanc_series_id"/>
+        <result property="seriesInstanceUid" column="series_instance_uid"/>
+        <result property="seriesNumber" column="series_number"/>
+        <result property="seriesDescription" column="series_description"/>
+        <result property="modality" column="modality"/>
+        <result property="bodyPartExamined" column="body_part_examined"/>
+        <result property="instanceCount" column="instance_count"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+    <sql id="selectDcmSeriesVo">
+        select id, study_id, orthanc_series_id, series_instance_uid, series_number,
+               series_description, modality, body_part_examined, instance_count,
+               create_by, create_time, update_by, update_time, del_flag
+          from dcm_series
+    </sql>
+    <select id="selectDcmSeriesList" parameterType="DcmSeries" resultMap="DcmSeriesResult">
+        <include refid="selectDcmSeriesVo"/>
+        <where>
+            del_flag = '0'
+            <if test="studyId != null">and study_id = #{studyId}</if>
+        </where>
+        order by id
+    </select>
+    <select id="selectDcmSeriesByUid" parameterType="String" resultMap="DcmSeriesResult">
+        <include refid="selectDcmSeriesVo"/>
+        where series_instance_uid = #{seriesInstanceUid} limit 1
+    </select>
+    <insert id="insertDcmSeries" parameterType="DcmSeries" useGeneratedKeys="true" keyProperty="id">
+        insert into dcm_series
+        (study_id, orthanc_series_id, series_instance_uid, series_number, series_description,
+         modality, body_part_examined, instance_count, create_by, create_time, update_by,
+         update_time, del_flag)
+        values
+        (#{studyId}, #{orthancSeriesId}, #{seriesInstanceUid}, #{seriesNumber}, #{seriesDescription},
+         #{modality}, #{bodyPartExamined}, #{instanceCount}, #{createBy}, sysdate(), #{updateBy},
+         sysdate(), #{delFlag})
+    </insert>
+    <update id="updateDcmSeries" parameterType="DcmSeries">
+        update dcm_series
+           set study_id = #{studyId}, orthanc_series_id = #{orthancSeriesId},
+               series_number = #{seriesNumber}, series_description = #{seriesDescription},
+               modality = #{modality}, body_part_examined = #{bodyPartExamined},
+               instance_count = #{instanceCount}, update_by = #{updateBy},
+               update_time = sysdate(), del_flag = #{delFlag}
+         where id = #{id}
+    </update>
+    <update id="softDeleteDcmSeriesByStudyId" parameterType="Long">
+        update dcm_series set del_flag = '2', update_time = sysdate()
+        where study_id = #{studyId} and del_flag = '0'
+    </update>
+    <update id="softDeleteDcmSeriesByStudyIds" parameterType="Long">
+        update dcm_series set del_flag = '2', update_time = sysdate()
+        where study_id in
+        <foreach collection="array" item="studyId" open="(" separator="," close=")">#{studyId}</foreach>
+    </update>
+</mapper>

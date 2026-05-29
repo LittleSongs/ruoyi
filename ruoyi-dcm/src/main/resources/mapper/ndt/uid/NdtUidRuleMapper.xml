@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.uid.mapper.NdtUidRuleMapper">
+    <resultMap type="NdtUidRule" id="NdtUidRuleResult">
+        <id property="id" column="id"/>
+        <result property="ruleName" column="rule_name"/>
+        <result property="uidType" column="uid_type"/>
+        <result property="rootType" column="root_type"/>
+        <result property="uidRoot" column="uid_root"/>
+        <result property="suffixPattern" column="suffix_pattern"/>
+        <result property="enabled" column="enabled"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectNdtUidRuleVo">
+        select id, rule_name, uid_type, root_type, uid_root, suffix_pattern, enabled,
+               remark, create_by, create_time, update_by, update_time, del_flag
+          from ndt_uid_rule
+    </sql>
+
+    <select id="selectNdtUidRuleList" parameterType="NdtUidRule" resultMap="NdtUidRuleResult">
+        <include refid="selectNdtUidRuleVo"/>
+        <where>
+            del_flag = '0'
+            <if test="ruleName != null and ruleName != ''">and rule_name like concat('%', #{ruleName}, '%')</if>
+            <if test="uidType != null and uidType != ''">and uid_type = #{uidType}</if>
+            <if test="rootType != null and rootType != ''">and root_type = #{rootType}</if>
+            <if test="enabled != null and enabled != ''">and enabled = #{enabled}</if>
+        </where>
+        order by uid_type, enabled desc, id desc
+    </select>
+
+    <select id="selectNdtUidRuleById" parameterType="Long" resultMap="NdtUidRuleResult">
+        <include refid="selectNdtUidRuleVo"/>
+        where id = #{id} and del_flag = '0'
+    </select>
+
+    <select id="selectEnabledNdtUidRuleByType" parameterType="String" resultMap="NdtUidRuleResult">
+        <include refid="selectNdtUidRuleVo"/>
+        where uid_type = #{uidType} and enabled = '1' and del_flag = '0'
+        order by id desc limit 1
+    </select>
+
+    <insert id="insertNdtUidRule" parameterType="NdtUidRule" useGeneratedKeys="true" keyProperty="id">
+        insert into ndt_uid_rule
+        (rule_name, uid_type, root_type, uid_root, suffix_pattern, enabled, remark,
+         create_by, create_time, update_by, update_time, del_flag)
+        values
+        (#{ruleName}, #{uidType}, #{rootType}, #{uidRoot}, #{suffixPattern}, #{enabled}, #{remark},
+         #{createBy}, sysdate(), #{updateBy}, sysdate(), #{delFlag})
+    </insert>
+
+    <update id="updateNdtUidRule" parameterType="NdtUidRule">
+        update ndt_uid_rule
+           set rule_name = #{ruleName},
+               uid_type = #{uidType},
+               root_type = #{rootType},
+               uid_root = #{uidRoot},
+               suffix_pattern = #{suffixPattern},
+               enabled = #{enabled},
+               remark = #{remark},
+               update_by = #{updateBy},
+               update_time = sysdate(),
+               del_flag = #{delFlag}
+         where id = #{id}
+    </update>
+
+    <update id="disableOtherRules">
+        update ndt_uid_rule
+           set enabled = '0', update_by = #{updateBy}, update_time = sysdate()
+         where id != #{id} and uid_type = #{uidType} and enabled = '1' and del_flag = '0'
+    </update>
+
+    <update id="softDeleteNdtUidRuleByIds" parameterType="Long">
+        update ndt_uid_rule set del_flag = '2', update_time = sysdate()
+        where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </update>
+</mapper>

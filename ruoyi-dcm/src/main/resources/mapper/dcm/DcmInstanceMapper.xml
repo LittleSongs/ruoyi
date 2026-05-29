@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.dcm.mapper.DcmInstanceMapper">
+    <resultMap type="DcmInstance" id="DcmInstanceResult">
+        <id property="id" column="id"/>
+        <result property="studyId" column="study_id"/>
+        <result property="seriesId" column="series_id"/>
+        <result property="orthancInstanceId" column="orthanc_instance_id"/>
+        <result property="sopInstanceUid" column="sop_instance_uid"/>
+        <result property="instanceNumber" column="instance_number"/>
+        <result property="sopClassUid" column="sop_class_uid"/>
+        <result property="imageType" column="image_type"/>
+        <result property="rows" column="rows"/>
+        <result property="columns" column="columns"/>
+        <result property="pixelSpacing" column="pixel_spacing"/>
+        <result property="sliceLocation" column="slice_location"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+    <sql id="selectDcmInstanceVo">
+        select id, study_id, series_id, orthanc_instance_id, sop_instance_uid, instance_number,
+               sop_class_uid, image_type, `rows`, `columns`, pixel_spacing, slice_location,
+               create_by, create_time, update_by, update_time, del_flag
+          from dcm_instance
+    </sql>
+    <select id="selectDcmInstanceList" parameterType="DcmInstance" resultMap="DcmInstanceResult">
+        <include refid="selectDcmInstanceVo"/>
+        <where>
+            del_flag = '0'
+            <if test="seriesId != null">and series_id = #{seriesId}</if>
+            <if test="studyId != null">and study_id = #{studyId}</if>
+        </where>
+        order by id
+    </select>
+    <select id="selectDcmInstanceByUid" parameterType="String" resultMap="DcmInstanceResult">
+        <include refid="selectDcmInstanceVo"/>
+        where sop_instance_uid = #{sopInstanceUid} limit 1
+    </select>
+    <insert id="insertDcmInstance" parameterType="DcmInstance" useGeneratedKeys="true" keyProperty="id">
+        insert into dcm_instance
+        (study_id, series_id, orthanc_instance_id, sop_instance_uid, instance_number,
+         sop_class_uid, image_type, `rows`, `columns`, pixel_spacing, slice_location,
+         create_by, create_time, update_by, update_time, del_flag)
+        values
+        (#{studyId}, #{seriesId}, #{orthancInstanceId}, #{sopInstanceUid}, #{instanceNumber},
+         #{sopClassUid}, #{imageType}, #{rows}, #{columns}, #{pixelSpacing}, #{sliceLocation},
+         #{createBy}, sysdate(), #{updateBy}, sysdate(), #{delFlag})
+    </insert>
+    <update id="updateDcmInstance" parameterType="DcmInstance">
+        update dcm_instance
+           set study_id = #{studyId}, series_id = #{seriesId},
+               orthanc_instance_id = #{orthancInstanceId}, instance_number = #{instanceNumber},
+               sop_class_uid = #{sopClassUid}, image_type = #{imageType}, `rows` = #{rows},
+               `columns` = #{columns}, pixel_spacing = #{pixelSpacing},
+               slice_location = #{sliceLocation}, update_by = #{updateBy},
+               update_time = sysdate(), del_flag = #{delFlag}
+         where id = #{id}
+    </update>
+    <update id="softDeleteDcmInstanceByStudyId" parameterType="Long">
+        update dcm_instance set del_flag = '2', update_time = sysdate()
+        where study_id = #{studyId} and del_flag = '0'
+    </update>
+    <update id="softDeleteDcmInstanceByStudyIds" parameterType="Long">
+        update dcm_instance set del_flag = '2', update_time = sysdate()
+        where study_id in
+        <foreach collection="array" item="studyId" open="(" separator="," close=")">#{studyId}</foreach>
+    </update>
+</mapper>

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.integrity.mapper.NdtDicomIntegrityRecordMapper">
+    <resultMap type="NdtDicomIntegrityRecord" id="NdtDicomIntegrityRecordResult">
+        <id property="id" column="id"/>
+        <result property="dicomInstanceId" column="dicom_instance_id"/>
+        <result property="studyInstanceUid" column="study_instance_uid"/>
+        <result property="seriesInstanceUid" column="series_instance_uid"/>
+        <result property="sopInstanceUid" column="sop_instance_uid"/>
+        <result property="orthancInstanceId" column="orthanc_instance_id"/>
+        <result property="pixelDataSha256" column="pixel_data_sha256"/>
+        <result property="metadataSha256" column="metadata_sha256"/>
+        <result property="fileSha256" column="file_sha256"/>
+        <result property="signedContent" column="signed_content"/>
+        <result property="signatureAlgorithm" column="signature_algorithm"/>
+        <result property="signatureValue" column="signature_value"/>
+        <result property="publicKeyId" column="public_key_id"/>
+        <result property="importUserId" column="import_user_id"/>
+        <result property="importTime" column="import_time"/>
+        <result property="lastVerifyTime" column="last_verify_time"/>
+        <result property="verifyStatus" column="verify_status"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectNdtDicomIntegrityRecordVo">
+        select r.id, i.id as dicom_instance_id, r.study_instance_uid, r.series_instance_uid, r.sop_instance_uid, r.orthanc_instance_id,
+               r.pixel_data_sha256, r.metadata_sha256, r.file_sha256, r.signed_content, r.signature_algorithm,
+               r.signature_value, r.public_key_id, r.import_user_id, r.import_time, r.last_verify_time,
+               r.verify_status, r.remark, r.create_time, r.update_time
+          from ndt_dicom_integrity_record r
+          left join ndt_dicom_instance i on i.sop_instance_uid = r.sop_instance_uid and i.del_flag = '0'
+    </sql>
+
+    <select id="selectNdtDicomIntegrityRecordList" parameterType="NdtDicomIntegrityRecord" resultMap="NdtDicomIntegrityRecordResult">
+        <include refid="selectNdtDicomIntegrityRecordVo"/>
+        <where>
+            <if test="studyInstanceUid != null and studyInstanceUid != ''">and r.study_instance_uid like concat('%', #{studyInstanceUid}, '%')</if>
+            <if test="seriesInstanceUid != null and seriesInstanceUid != ''">and r.series_instance_uid like concat('%', #{seriesInstanceUid}, '%')</if>
+            <if test="sopInstanceUid != null and sopInstanceUid != ''">and r.sop_instance_uid like concat('%', #{sopInstanceUid}, '%')</if>
+            <if test="orthancInstanceId != null and orthancInstanceId != ''">and r.orthanc_instance_id = #{orthancInstanceId}</if>
+            <if test="verifyStatus != null and verifyStatus != ''">and r.verify_status = #{verifyStatus}</if>
+            <if test="params.scopeType == 'ASSIGNED'">
+                and exists (
+                    select 1 from ndt_task_user tu
+                     where tu.task_id = i.task_id and tu.user_id = #{params.scopeUserId} and tu.can_view = '1'
+                )
+            </if>
+            <if test="params.scopeType == 'CUSTOMER_DEPT'">and i.customer_dept_id = #{params.scopeDeptId}</if>
+            <if test="params.scopeType == 'NONE'">and 1 = 0</if>
+        </where>
+        order by r.import_time desc, r.id desc
+    </select>
+
+    <select id="selectNdtDicomIntegrityRecordById" parameterType="Long" resultMap="NdtDicomIntegrityRecordResult">
+        <include refid="selectNdtDicomIntegrityRecordVo"/>
+        where r.id = #{id}
+    </select>
+
+    <select id="selectNdtDicomIntegrityRecordBySopUid" parameterType="String" resultMap="NdtDicomIntegrityRecordResult">
+        <include refid="selectNdtDicomIntegrityRecordVo"/>
+        where r.sop_instance_uid = #{sopInstanceUid} limit 1
+    </select>
+
+    <insert id="insertNdtDicomIntegrityRecord" parameterType="NdtDicomIntegrityRecord" useGeneratedKeys="true" keyProperty="id">
+        insert into ndt_dicom_integrity_record
+        (study_instance_uid, series_instance_uid, sop_instance_uid, orthanc_instance_id,
+         pixel_data_sha256, metadata_sha256, file_sha256, signed_content, signature_algorithm,
+         signature_value, public_key_id, import_user_id, import_time, last_verify_time,
+         verify_status, remark, create_time, update_time)
+        values
+        (#{studyInstanceUid}, #{seriesInstanceUid}, #{sopInstanceUid}, #{orthancInstanceId},
+         #{pixelDataSha256}, #{metadataSha256}, #{fileSha256}, #{signedContent}, #{signatureAlgorithm},
+         #{signatureValue}, #{publicKeyId}, #{importUserId}, #{importTime}, #{lastVerifyTime},
+         #{verifyStatus}, #{remark}, sysdate(), sysdate())
+    </insert>
+
+    <update id="updateNdtDicomIntegrityRecord" parameterType="NdtDicomIntegrityRecord">
+        update ndt_dicom_integrity_record
+           set study_instance_uid = #{studyInstanceUid},
+               series_instance_uid = #{seriesInstanceUid},
+               orthanc_instance_id = #{orthancInstanceId},
+               pixel_data_sha256 = #{pixelDataSha256},
+               metadata_sha256 = #{metadataSha256},
+               file_sha256 = #{fileSha256},
+               signed_content = #{signedContent},
+               signature_algorithm = #{signatureAlgorithm},
+               signature_value = #{signatureValue},
+               public_key_id = #{publicKeyId},
+               import_user_id = #{importUserId},
+               import_time = #{importTime},
+               last_verify_time = #{lastVerifyTime},
+               verify_status = #{verifyStatus},
+               remark = #{remark},
+               update_time = sysdate()
+         where id = #{id}
+    </update>
+</mapper>

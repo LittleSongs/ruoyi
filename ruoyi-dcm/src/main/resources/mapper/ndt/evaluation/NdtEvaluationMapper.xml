@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.evaluation.mapper.NdtEvaluationMapper">
+    <resultMap type="NdtEvaluation" id="NdtEvaluationResult">
+        <id property="id" column="id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="taskNo" column="task_no"/>
+        <result property="taskName" column="task_name"/>
+        <result property="studyInstanceUid" column="study_instance_uid"/>
+        <result property="seriesInstanceUid" column="series_instance_uid"/>
+        <result property="sopInstanceUid" column="sop_instance_uid"/>
+        <result property="evaluatorUserId" column="evaluator_user_id"/>
+        <result property="evaluatorUserName" column="evaluator_user_name"/>
+        <result property="defectType" column="defect_type"/>
+        <result property="defectLevel" column="defect_level"/>
+        <result property="conclusion" column="conclusion"/>
+        <result property="annotationJson" column="annotation_json"/>
+        <result property="evaluateTime" column="evaluate_time"/>
+        <result property="status" column="status"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectNdtEvaluationVo">
+        select e.id, e.task_id, t.task_no, t.task_name, e.study_instance_uid,
+               e.series_instance_uid, e.sop_instance_uid, e.evaluator_user_id,
+               u.user_name as evaluator_user_name, e.defect_type, e.defect_level,
+               e.conclusion, e.annotation_json, e.evaluate_time, e.status, e.remark,
+               e.create_by, e.create_time, e.update_by, e.update_time, e.del_flag
+          from ndt_evaluation e
+          left join ndt_inspection_task t on t.id = e.task_id
+          left join sys_user u on u.user_id = e.evaluator_user_id
+    </sql>
+
+    <select id="selectNdtEvaluationList" parameterType="NdtEvaluation" resultMap="NdtEvaluationResult">
+        <include refid="selectNdtEvaluationVo"/>
+        <where>
+            e.del_flag = '0'
+            <if test="taskId != null">and e.task_id = #{taskId}</if>
+            <if test="taskNo != null and taskNo != ''">and t.task_no like concat('%', #{taskNo}, '%')</if>
+            <if test="sopInstanceUid != null and sopInstanceUid != ''">and e.sop_instance_uid like concat('%', #{sopInstanceUid}, '%')</if>
+            <if test="defectType != null and defectType != ''">and e.defect_type like concat('%', #{defectType}, '%')</if>
+            <if test="defectLevel != null and defectLevel != ''">and e.defect_level = #{defectLevel}</if>
+            <if test="status != null and status != ''">and e.status = #{status}</if>
+            <if test="params.scopeType == 'ASSIGNED'">
+                and exists (
+                    select 1 from ndt_task_user tu
+                     where tu.task_id = e.task_id and tu.user_id = #{params.scopeUserId} and tu.can_view = '1'
+                )
+            </if>
+            <if test="params.scopeType == 'CUSTOMER_DEPT'">and t.customer_dept_id = #{params.scopeDeptId}</if>
+            <if test="params.scopeType == 'NONE'">and 1 = 0</if>
+        </where>
+        order by e.evaluate_time desc, e.id desc
+    </select>
+
+    <select id="selectNdtEvaluationById" parameterType="Long" resultMap="NdtEvaluationResult">
+        <include refid="selectNdtEvaluationVo"/>
+        where e.id = #{id} and e.del_flag = '0'
+    </select>
+
+    <insert id="insertNdtEvaluation" parameterType="NdtEvaluation" useGeneratedKeys="true" keyProperty="id">
+        insert into ndt_evaluation
+        (task_id, study_instance_uid, series_instance_uid, sop_instance_uid, evaluator_user_id,
+         defect_type, defect_level, conclusion, annotation_json, evaluate_time, status, remark,
+         create_by, create_time, update_by, update_time, del_flag)
+        values
+        (#{taskId}, #{studyInstanceUid}, #{seriesInstanceUid}, #{sopInstanceUid}, #{evaluatorUserId},
+         #{defectType}, #{defectLevel}, #{conclusion}, #{annotationJson}, #{evaluateTime}, #{status}, #{remark},
+         #{createBy}, sysdate(), #{updateBy}, sysdate(), #{delFlag})
+    </insert>
+
+    <update id="updateNdtEvaluation" parameterType="NdtEvaluation">
+        update ndt_evaluation
+           set study_instance_uid = #{studyInstanceUid},
+               series_instance_uid = #{seriesInstanceUid},
+               sop_instance_uid = #{sopInstanceUid},
+               evaluator_user_id = #{evaluatorUserId},
+               defect_type = #{defectType},
+               defect_level = #{defectLevel},
+               conclusion = #{conclusion},
+               annotation_json = #{annotationJson},
+               evaluate_time = #{evaluateTime},
+               status = #{status},
+               remark = #{remark},
+               update_by = #{updateBy},
+               update_time = sysdate(),
+               del_flag = #{delFlag}
+         where id = #{id}
+    </update>
+
+    <update id="softDeleteNdtEvaluationByIds" parameterType="Long">
+        update ndt_evaluation set del_flag = '2', update_time = sysdate()
+        where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </update>
+</mapper>

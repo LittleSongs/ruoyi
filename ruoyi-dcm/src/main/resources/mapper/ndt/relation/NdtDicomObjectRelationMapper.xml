@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.relation.mapper.NdtDicomObjectRelationMapper">
+    <resultMap type="NdtDicomObjectRelation" id="NdtDicomObjectRelationResult">
+        <id property="id" column="id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="sourceSopInstanceUid" column="source_sop_instance_uid"/>
+        <result property="relatedSopInstanceUid" column="related_sop_instance_uid"/>
+        <result property="relatedType" column="related_type"/>
+        <result property="relatedSeriesInstanceUid" column="related_series_instance_uid"/>
+        <result property="orthancInstanceId" column="orthanc_instance_id"/>
+        <result property="evaluationId" column="evaluation_id"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <select id="selectNdtDicomObjectRelationList" parameterType="NdtDicomObjectRelation" resultMap="NdtDicomObjectRelationResult">
+        select id, task_id, source_sop_instance_uid, related_sop_instance_uid,
+               related_type, related_series_instance_uid, orthanc_instance_id,
+               evaluation_id, create_time
+          from ndt_dicom_object_relation
+        <where>
+            <if test="taskId != null">and task_id = #{taskId}</if>
+            <if test="sourceSopInstanceUid != null and sourceSopInstanceUid != ''">and source_sop_instance_uid = #{sourceSopInstanceUid}</if>
+            <if test="relatedType != null and relatedType != ''">and related_type = #{relatedType}</if>
+            <if test="evaluationId != null">and evaluation_id = #{evaluationId}</if>
+        </where>
+        order by id desc
+    </select>
+
+    <insert id="insertNdtDicomObjectRelation" parameterType="NdtDicomObjectRelation" useGeneratedKeys="true" keyProperty="id">
+        insert into ndt_dicom_object_relation
+        (task_id, source_sop_instance_uid, related_sop_instance_uid, related_type,
+         related_series_instance_uid, orthanc_instance_id, evaluation_id, create_time)
+        values
+        (#{taskId}, #{sourceSopInstanceUid}, #{relatedSopInstanceUid}, #{relatedType},
+         #{relatedSeriesInstanceUid}, #{orthancInstanceId}, #{evaluationId}, sysdate())
+    </insert>
+</mapper>

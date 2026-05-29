@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.dicom.mapper.NdtDicomInstanceMapper">
+    <resultMap type="NdtDicomInstance" id="NdtDicomInstanceResult">
+        <id property="id" column="id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="taskNo" column="task_no"/>
+        <result property="taskName" column="task_name"/>
+        <result property="workpieceName" column="workpiece_name"/>
+        <result property="customerDeptId" column="customer_dept_id"/>
+        <result property="customerDeptName" column="customer_dept_name"/>
+        <result property="studyInstanceUid" column="study_instance_uid"/>
+        <result property="seriesInstanceUid" column="series_instance_uid"/>
+        <result property="sopInstanceUid" column="sop_instance_uid"/>
+        <result property="orthancStudyId" column="orthanc_study_id"/>
+        <result property="orthancSeriesId" column="orthanc_series_id"/>
+        <result property="orthancInstanceId" column="orthanc_instance_id"/>
+        <result property="modality" column="modality"/>
+        <result property="seriesNumber" column="series_number"/>
+        <result property="instanceNumber" column="instance_number"/>
+        <result property="seriesDescription" column="series_description"/>
+        <result property="sopClassUid" column="sop_class_uid"/>
+        <result property="isOriginal" column="is_original"/>
+        <result property="fileName" column="file_name"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="uploadUserId" column="upload_user_id"/>
+        <result property="uploadTime" column="upload_time"/>
+        <result property="integrityStatus" column="integrity_status"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectNdtDicomInstanceVo">
+        select i.id, i.task_id, t.task_no, t.task_name, i.workpiece_name,
+               i.customer_dept_id, d.dept_name as customer_dept_name,
+               i.study_instance_uid, i.series_instance_uid, i.sop_instance_uid,
+               i.orthanc_study_id, i.orthanc_series_id, i.orthanc_instance_id,
+               i.modality, i.series_number, i.instance_number, i.series_description,
+               i.sop_class_uid, i.is_original, i.file_name, i.file_size,
+               i.upload_user_id, i.upload_time, i.integrity_status, i.remark,
+               i.create_by, i.create_time, i.update_by, i.update_time, i.del_flag
+          from ndt_dicom_instance i
+          left join ndt_inspection_task t on t.id = i.task_id
+          left join sys_dept d on d.dept_id = i.customer_dept_id
+    </sql>
+
+    <select id="selectNdtDicomInstanceList" parameterType="NdtDicomInstance" resultMap="NdtDicomInstanceResult">
+        <include refid="selectNdtDicomInstanceVo"/>
+        <where>
+            i.del_flag = '0'
+            <if test="taskId != null">and i.task_id = #{taskId}</if>
+            <if test="workpieceName != null and workpieceName != ''">and i.workpiece_name like concat('%', #{workpieceName}, '%')</if>
+            <if test="customerDeptId != null">and i.customer_dept_id = #{customerDeptId}</if>
+            <if test="studyInstanceUid != null and studyInstanceUid != ''">and i.study_instance_uid like concat('%', #{studyInstanceUid}, '%')</if>
+            <if test="seriesInstanceUid != null and seriesInstanceUid != ''">and i.series_instance_uid like concat('%', #{seriesInstanceUid}, '%')</if>
+            <if test="sopInstanceUid != null and sopInstanceUid != ''">and i.sop_instance_uid like concat('%', #{sopInstanceUid}, '%')</if>
+            <if test="modality != null and modality != ''">and i.modality = #{modality}</if>
+            <if test="integrityStatus != null and integrityStatus != ''">and i.integrity_status = #{integrityStatus}</if>
+            <if test="params.scopeType == 'ASSIGNED'">
+                and exists (
+                    select 1 from ndt_task_user tu
+                     where tu.task_id = i.task_id and tu.user_id = #{params.scopeUserId} and tu.can_view = '1'
+                )
+            </if>
+            <if test="params.scopeType == 'CUSTOMER_DEPT'">and i.customer_dept_id = #{params.scopeDeptId}</if>
+            <if test="params.scopeType == 'NONE'">and 1 = 0</if>
+        </where>
+        order by i.upload_time desc, i.id desc
+    </select>
+
+    <select id="selectNdtDicomInstanceById" parameterType="Long" resultMap="NdtDicomInstanceResult">
+        <include refid="selectNdtDicomInstanceVo"/>
+        where i.id = #{id} and i.del_flag = '0'
+    </select>
+
+    <select id="selectNdtDicomInstanceBySopUid" parameterType="String" resultMap="NdtDicomInstanceResult">
+        <include refid="selectNdtDicomInstanceVo"/>
+        where i.sop_instance_uid = #{sopInstanceUid} and i.del_flag = '0' limit 1
+    </select>
+
+    <insert id="insertNdtDicomInstance" parameterType="NdtDicomInstance" useGeneratedKeys="true" keyProperty="id">
+        insert into ndt_dicom_instance
+        (task_id, workpiece_name, customer_dept_id, study_instance_uid, series_instance_uid,
+         sop_instance_uid, orthanc_study_id, orthanc_series_id, orthanc_instance_id,
+         modality, series_number, instance_number, series_description, sop_class_uid,
+         is_original, file_name, file_size, upload_user_id, upload_time, integrity_status,
+         remark, create_by, create_time, update_by, update_time, del_flag)
+        values
+        (#{taskId}, #{workpieceName}, #{customerDeptId}, #{studyInstanceUid}, #{seriesInstanceUid},
+         #{sopInstanceUid}, #{orthancStudyId}, #{orthancSeriesId}, #{orthancInstanceId},
+         #{modality}, #{seriesNumber}, #{instanceNumber}, #{seriesDescription}, #{sopClassUid},
+         #{isOriginal}, #{fileName}, #{fileSize}, #{uploadUserId}, #{uploadTime}, #{integrityStatus},
+         #{remark}, #{createBy}, sysdate(), #{updateBy}, sysdate(), #{delFlag})
+    </insert>
+
+    <update id="updateNdtDicomInstance" parameterType="NdtDicomInstance">
+        update ndt_dicom_instance
+           set task_id = #{taskId},
+               workpiece_name = #{workpieceName},
+               customer_dept_id = #{customerDeptId},
+               study_instance_uid = #{studyInstanceUid},
+               series_instance_uid = #{seriesInstanceUid},
+               orthanc_study_id = #{orthancStudyId},
+               orthanc_series_id = #{orthancSeriesId},
+               orthanc_instance_id = #{orthancInstanceId},
+               modality = #{modality},
+               series_number = #{seriesNumber},
+               instance_number = #{instanceNumber},
+               series_description = #{seriesDescription},
+               sop_class_uid = #{sopClassUid},
+               is_original = #{isOriginal},
+               file_name = #{fileName},
+               file_size = #{fileSize},
+               upload_user_id = #{uploadUserId},
+               upload_time = #{uploadTime},
+               integrity_status = #{integrityStatus},
+               remark = #{remark},
+               update_by = #{updateBy},
+               update_time = sysdate(),
+               del_flag = #{delFlag}
+         where id = #{id}
+    </update>
+</mapper>
