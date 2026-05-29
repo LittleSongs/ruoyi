@@ -47,4 +47,4 @@ nbdist/
 !*/build/*.xml
 
 ### 忽略 ui
-ruoyi-vue/
+ruoyi-ui/
