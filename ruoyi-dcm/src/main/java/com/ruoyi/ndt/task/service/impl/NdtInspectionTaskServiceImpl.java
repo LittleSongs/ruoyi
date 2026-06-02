@@ -55,7 +55,11 @@ public class NdtInspectionTaskServiceImpl implements INdtInspectionTaskService
             task.setTaskUsers(taskUserMapper.selectNdtTaskUsersByTaskId(id));
             if (StringUtils.isNotEmpty(task.getStudyInstanceUid()))
             {
-                task.setOhifViewerUrl(properties.buildViewerUrl(task.getStudyInstanceUid()));
+                task.setOhifViewerUrl(properties.buildViewerUrl(
+                        task.getStudyInstanceUid(),
+                        id,
+                        String.valueOf(id),
+                        accessService.canEvaluateTask(id)));
             }
         }
         return task;
@@ -143,7 +147,7 @@ public class NdtInspectionTaskServiceImpl implements INdtInspectionTaskService
             }
         }
         taskMapper.updateNdtInspectionTaskStatus(taskId, NdtConstants.TASK_STATUS_ASSIGNED, username);
-        return rows;
+        return rows > 0 ? rows : 1;
     }
 
     @Override
@@ -162,7 +166,8 @@ public class NdtInspectionTaskServiceImpl implements INdtInspectionTaskService
         {
             throw new ServiceException("该任务尚未绑定StudyInstanceUID");
         }
-        return properties.buildViewerUrl(task.getStudyInstanceUid());
+        return properties.buildViewerUrl(task.getStudyInstanceUid(), taskId,
+                String.valueOf(taskId), accessService.canEvaluateTask(taskId));
     }
 
     private void validateTask(NdtInspectionTask task)

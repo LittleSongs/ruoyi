@@ -103,11 +103,23 @@ public class NdtUidRuleServiceImpl implements INdtUidRuleService
         {
             rule.setRootType(NdtConstants.UID_ROOT_TYPE_UUID_2_25);
         }
+        if (NdtConstants.UID_ROOT_TYPE_CUSTOM_ROOT.equals(rule.getRootType()))
+        {
+            validateSuffixPattern(rule.getSuffixPattern());
+        }
         if (StringUtils.isEmpty(rule.getEnabled()))
         {
             rule.setEnabled(NdtConstants.YES);
         }
         rule.setDelFlag(NdtConstants.DEL_FLAG_NORMAL);
+    }
+
+    private void validateSuffixPattern(String suffixPattern)
+    {
+        if (StringUtils.isEmpty(suffixPattern) || !suffixPattern.contains("{random}"))
+        {
+            throw new ServiceException("后缀模式必须包含至少一个{random}");
+        }
     }
 
     private void disableOtherEnabledRules(NdtUidRule rule)

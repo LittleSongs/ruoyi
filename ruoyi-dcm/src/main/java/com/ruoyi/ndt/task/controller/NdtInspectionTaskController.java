@@ -96,6 +96,6 @@ public class NdtInspectionTaskController extends BaseController
     @GetMapping("/{taskId}/ohif")
     public AjaxResult ohif(@PathVariable Long taskId)
     {
-        return success(taskService.getOhifViewerUrl(taskId));
+        return AjaxResult.success("操作成功", taskService.getOhifViewerUrl(taskId));
     }
 }

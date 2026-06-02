@@ -14,6 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.web.filter.CorsFilter;
+import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.framework.config.properties.PermitAllUrlProperties;
 import com.ruoyi.framework.security.filter.JwtAuthenticationTokenFilter;
 import com.ruoyi.framework.security.handle.AuthenticationEntryPointImpl;
@@ -104,6 +105,7 @@ public class SecurityConfig
                     // 静态资源，可匿名访问
                     .requestMatchers(HttpMethod.GET, "/", "/*.html", "/**.html", "/**.css", "/**.js", "/profile/**").permitAll()
                     .requestMatchers("/swagger-ui.html", "/v3/api-docs/**", "/swagger-ui/**", "/druid/**").permitAll()
+                    .requestMatchers("/ndt/**").permitAll()
                     // 除上面外的所有请求全部需要鉴权认证
                     .anyRequest().authenticated();
             })

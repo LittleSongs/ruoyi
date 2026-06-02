@@ -2,6 +2,7 @@ package com.ruoyi.ndt.evaluation.domain;
 
 import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ruoyi.common.core.domain.BaseEntity;
 
 /**
@@ -15,8 +16,11 @@ public class NdtEvaluation extends BaseEntity
     private Long taskId;
     private String taskNo;
     private String taskName;
+    @JsonProperty("studyInstanceUID")
     private String studyInstanceUid;
+    @JsonProperty("seriesInstanceUID")
     private String seriesInstanceUid;
+    @JsonProperty("sopInstanceUID")
     private String sopInstanceUid;
     private Long evaluatorUserId;
     private String evaluatorUserName;

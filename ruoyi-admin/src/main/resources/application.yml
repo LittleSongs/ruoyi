@@ -156,13 +156,14 @@ dcm:
     viewer-url: http://localhost:3000/viewer
 
 # 无损检测 DICOM 管理配置
+# 这里要区分viewer-url: http://localhost:3000/industrial-viewer 或 http://localhost:3000/viewer，因为不同用户有不同过的权限，有些能评定，有些能创建 SR，有些只能查看，这个后期再处理，目前就都按照industrial-viewer的逻辑走
 ndt:
   orthanc:
     base-url: http://localhost:8042
     username:
     password:
   ohif:
-    viewer-url: http://localhost:3000/viewer
+    viewer-url: http://localhost:3000/industrial-viewer
   security:
     # 中科检测公司根部门ID；该部门及其子部门视为公司内部部门，其余部门按客户部门处理
     company-root-dept-id: 100

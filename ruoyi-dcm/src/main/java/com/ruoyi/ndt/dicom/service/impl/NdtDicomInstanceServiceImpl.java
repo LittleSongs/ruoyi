@@ -64,7 +64,11 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
             return null;
         }
         accessService.checkViewTask(instance.getTaskId());
-        instance.setOhifViewerUrl(properties.buildViewerUrl(instance.getStudyInstanceUid()));
+        instance.setOhifViewerUrl(properties.buildViewerUrl(
+                instance.getStudyInstanceUid(),
+                instance.getTaskId(),
+                String.valueOf(instance.getTaskId()),
+                accessService.canEvaluateTask(instance.getTaskId())));
         return instance;
     }
 

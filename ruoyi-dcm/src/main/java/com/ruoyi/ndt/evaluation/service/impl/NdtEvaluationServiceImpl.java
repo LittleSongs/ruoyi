@@ -52,7 +52,10 @@ public class NdtEvaluationServiceImpl implements INdtEvaluationService
         {
             throw new ServiceException("检测任务不能为空");
         }
-        accessService.checkEvaluateTask(evaluation.getTaskId());
+        if (evaluatorUserId != null)
+        {
+            accessService.checkEvaluateTask(evaluation.getTaskId());
+        }
         if (StringUtils.isEmpty(evaluation.getStatus()))
         {
             evaluation.setStatus(NdtConstants.EVALUATION_STATUS_DRAFT);
@@ -62,8 +65,18 @@ public class NdtEvaluationServiceImpl implements INdtEvaluationService
         {
             throw new ServiceException("评定状态仅支持 DRAFT 或 SUBMITTED");
         }
+        if (StringUtils.isNotBlank(evaluation.getStudyInstanceUid())
+                && StringUtils.isNotBlank(evaluation.getSeriesInstanceUid())
+                && StringUtils.isNotBlank(evaluation.getSopInstanceUid()))
+        {
+            // keep incoming UIDs
+        }
+        else
+        {
+            throw new ServiceException("评定图像UID不能为空");
+        }
         evaluation.setEvaluatorUserId(evaluatorUserId);
-        evaluation.setEvaluateTime(NdtConstants.EVALUATION_STATUS_SUBMITTED.equals(evaluation.getStatus()) ? new Date() : null);
+        evaluation.setEvaluateTime(new Date());
         evaluation.setUpdateBy(username);
         evaluation.setDelFlag(NdtConstants.DEL_FLAG_NORMAL);
         int rows;

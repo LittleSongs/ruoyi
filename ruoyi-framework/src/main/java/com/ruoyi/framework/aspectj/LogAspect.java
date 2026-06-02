@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.multipart.MultipartFile;
 import com.alibaba.fastjson2.JSON;
+import com.ruoyi.common.annotation.Anonymous;
+import org.springframework.core.annotation.AnnotationUtils;
 import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.domain.entity.SysUser;
 import com.ruoyi.common.core.domain.model.LoginUser;
@@ -89,8 +91,12 @@ public class LogAspect
     {
         try
         {
-            // 获取当前的用户
-            LoginUser loginUser = SecurityUtils.getLoginUser();
+            // 获取当前的用户（匿名接口允许没有登录态）
+            LoginUser loginUser = null;
+            if (!isAnonymousRequest(joinPoint))
+            {
+                loginUser = SecurityUtils.getLoginUser();
+            }
 
             // *========数据库日志=========*//
             SysOperLog operLog = new SysOperLog();
@@ -165,6 +171,12 @@ public class LogAspect
         {
             operLog.setJsonResult(StringUtils.substring(JSON.toJSONString(jsonResult), 0, 2000));
         }
+    }
+
+    private boolean isAnonymousRequest(JoinPoint joinPoint)
+    {
+        return StringUtils.isNotNull(AnnotationUtils.findAnnotation(((org.aspectj.lang.reflect.MethodSignature) joinPoint.getSignature()).getMethod(), Anonymous.class))
+                || StringUtils.isNotNull(AnnotationUtils.findAnnotation(joinPoint.getTarget().getClass(), Anonymous.class));
     }
 
     /**

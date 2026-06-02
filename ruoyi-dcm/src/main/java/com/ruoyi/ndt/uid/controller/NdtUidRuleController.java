@@ -74,6 +74,6 @@ public class NdtUidRuleController extends BaseController
     @GetMapping("/generate")
     public AjaxResult generate(@RequestParam String uidType, @RequestParam(required = false) Long ruleId)
     {
-        return success(uidRuleService.generateUid(uidType, ruleId));
+        return AjaxResult.success("操作成功", uidRuleService.generateUid(uidType, ruleId));
     }
 }
