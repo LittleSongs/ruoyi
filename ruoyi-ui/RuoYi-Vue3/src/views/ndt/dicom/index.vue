@@ -79,16 +79,16 @@
     </el-row>
 
     <el-dialog v-model="tagDialogVisible" title="DICOM Tag 管理" width="960px" append-to-body>
-      <el-alert title="这里展示的是 Orthanc 中的实例标签，你可以直接编辑并回写。" type="info" show-icon class="mb12" />
+      <el-alert title="仅允许编辑白名单内的标量标签（PatientName、StudyDescription、SeriesDescription），其他字段已锁定。" type="info" show-icon class="mb12" />
       <el-table :data="tagItems" max-height="520">
         <el-table-column label="Tag名" min-width="200">
           <template #default="scope">
-            <el-input v-model="scope.row.tagName" placeholder="例如 StudyDescription" />
+            <el-input v-model="scope.row.tagName" placeholder="例如 StudyDescription" disabled />
           </template>
         </el-table-column>
         <el-table-column label="值" min-width="280">
           <template #default="scope">
-            <el-input v-model="scope.row.value" placeholder="请输入值" />
+            <el-input v-model="scope.row.value" :disabled="!scope.row.editable" placeholder="请输入值" />
           </template>
         </el-table-column>
         <el-table-column label="原值" min-width="280">
@@ -96,15 +96,18 @@
             <el-input :model-value="scope.row.originalValue" disabled />
           </template>
         </el-table-column>
+        <el-table-column label="可编辑" width="100" align="center">
+          <template #default="scope">
+            <el-tag v-if="scope.row.editable" type="success">是</el-tag>
+            <el-tag v-else type="info">否</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="100" align="center">
           <template #default="scope">
-            <el-button link type="danger" icon="Delete" @click="removeTagRow(scope.$index)">删除</el-button>
+            <el-button link type="danger" icon="Delete" :disabled="!scope.row.editable" @click="removeTagRow(scope.$index)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <div class="dialog-actions">
-        <el-button icon="Plus" @click="addTagRow">新增Tag</el-button>
-      </div>
       <template #footer>
         <el-button type="primary" @click="saveTags">保存</el-button>
         <el-button @click="tagDialogVisible = false">取消</el-button>
@@ -131,6 +134,7 @@ const currentDicomDetail = ref(null)
 const tagDialogVisible = ref(false)
 const tagItems = ref([])
 const treeProps = { children: 'children', label: 'title' }
+const EDITABLE_TAGS = new Set(['PatientName', 'StudyDescription', 'SeriesDescription'])
 const queryParams = reactive({ pageNum: 1, pageSize: 10, taskNo: undefined, workpieceName: undefined, studyInstanceUid: undefined, sopInstanceUid: undefined })
 
 function getList() {
@@ -174,10 +178,12 @@ function handleTreeClick(node) {
 }
 function openTagDialog(id) {
   currentDicomId.value = id
-  getDicomTags(id).then(res => { tagItems.value = res.data || []; tagDialogVisible.value = true })
+  getDicomTags(id).then(res => {
+    tagItems.value = (res.data || []).map(item => ({ ...item, editable: EDITABLE_TAGS.has(item.tagName) }))
+    tagDialogVisible.value = true
+  })
 }
-function addTagRow() { tagItems.value.push({ tagName: '', value: '', originalValue: '', editable: true }) }
-function removeTagRow(index) { tagItems.value.splice(index, 1) }
+function removeTagRow(index) { if (tagItems.value[index]?.editable) tagItems.value.splice(index, 1) }
 function saveTags() {
   updateDicomTag(currentDicomId.value, tagItems.value).then(() => {
     proxy.$modal.msgSuccess('保存成功')

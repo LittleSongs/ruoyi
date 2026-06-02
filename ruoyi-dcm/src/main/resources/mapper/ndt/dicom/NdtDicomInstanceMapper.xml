@@ -106,6 +106,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
                customer_dept_id = #{customerDeptId},
                study_instance_uid = #{studyInstanceUid},
                series_instance_uid = #{seriesInstanceUid},
+               sop_instance_uid = #{sopInstanceUid},
                orthanc_study_id = #{orthancStudyId},
                orthanc_series_id = #{orthancSeriesId},
                orthanc_instance_id = #{orthancInstanceId},

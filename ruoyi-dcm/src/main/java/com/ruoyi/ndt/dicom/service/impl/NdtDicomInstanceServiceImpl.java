@@ -20,6 +20,8 @@ import com.ruoyi.ndt.integrity.domain.NdtDicomIntegrityRecord;
 import com.ruoyi.ndt.integrity.mapper.NdtDicomIntegrityRecordMapper;
 import com.ruoyi.ndt.integrity.service.INdtIntegrityService;
 import com.ruoyi.ndt.orthanc.OrthancService;
+import com.ruoyi.ndt.relation.domain.NdtDicomObjectRelation;
+import com.ruoyi.ndt.relation.mapper.NdtDicomObjectRelationMapper;
 import com.ruoyi.ndt.security.NdtAccessService;
 import com.ruoyi.ndt.task.domain.NdtInspectionTask;
 import com.ruoyi.ndt.task.mapper.NdtInspectionTaskMapper;
@@ -41,6 +43,9 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
 
     @Autowired
     private INdtIntegrityService integrityService;
+
+    @Autowired
+    private NdtDicomObjectRelationMapper objectRelationMapper;
 
     @Autowired
     private NdtAccessService accessService;
@@ -135,6 +140,69 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public NdtDicomUploadResult replaceDicomTags(Long id, JSONObject tags, Long userId, String username)
+    {
+        if (id == null)
+        {
+            throw new ServiceException("DICOM实例ID不能为空");
+        }
+        if (tags == null || tags.isEmpty())
+        {
+            throw new ServiceException("请提供需要替换的 DICOM 标签");
+        }
+
+        NdtDicomInstance original = dicomInstanceMapper.selectNdtDicomInstanceById(id);
+        if (original == null)
+        {
+            throw new ServiceException("DICOM实例不存在");
+        }
+        accessService.checkViewTask(original.getTaskId());
+
+        String oldOrthancInstanceId = original.getOrthancInstanceId();
+        String oldSopUid = original.getSopInstanceUid();
+        String oldStudyUid = original.getStudyInstanceUid();
+        String oldSeriesUid = original.getSeriesInstanceUid();
+        String oldOrthancSeriesId = original.getOrthancSeriesId();
+        String oldOrthancStudyId = original.getOrthancStudyId();
+
+        byte[] modifiedDicom = orthancService.modifyInstance(oldOrthancInstanceId, tags);
+        orthancService.deleteInstance(oldOrthancInstanceId);
+        JSONObject uploadResponse = orthancService.uploadInstance(modifiedDicom);
+        String newOrthancInstanceId = requireValue(uploadResponse.getString("ID"), "Orthanc 重新上传响应缺少 Instance ID");
+        JSONObject orthancInstance = orthancService.getInstance(newOrthancInstanceId);
+        String newOrthancSeriesId = requireValue(orthancInstance.getString("ParentSeries"), "Orthanc Instance 缺少 ParentSeries");
+        JSONObject orthancSeries = orthancService.getSeries(newOrthancSeriesId);
+        String newOrthancStudyId = requireValue(orthancSeries.getString("ParentStudy"), "Orthanc Series 缺少 ParentStudy");
+        JSONObject mergedTags = orthancService.getInstanceSimplifiedTags(newOrthancInstanceId);
+
+        String newStudyUid = requireTag(mergedTags, "StudyInstanceUID");
+        String newSeriesUid = requireTag(mergedTags, "SeriesInstanceUID");
+        String newSopUid = requireTag(mergedTags, "SOPInstanceUID");
+        if (StringUtils.isNotEmpty(original.getStudyInstanceUid()) && !original.getStudyInstanceUid().equals(newStudyUid))
+        {
+            throw new ServiceException("当前替换后的 DICOM 属于不同 StudyInstanceUID，不允许直接替换当前业务实例");
+        }
+
+        NdtDicomInstance updated = updateDicomIndexes(original, userId, username, newOrthancStudyId, newOrthancSeriesId,
+                newOrthancInstanceId, mergedTags, newStudyUid, newSeriesUid, newSopUid);
+        updateIntegrityRecordAndRelations(original, updated, oldOrthancInstanceId, oldSopUid, oldStudyUid,
+                oldSeriesUid, oldOrthancStudyId, oldOrthancSeriesId, userId);
+
+        NdtDicomUploadResult result = new NdtDicomUploadResult();
+        result.setTaskId(updated.getTaskId());
+        result.setDicomInstanceId(updated.getId());
+        result.setStudyInstanceUid(updated.getStudyInstanceUid());
+        result.setSeriesInstanceUid(updated.getSeriesInstanceUid());
+        result.setSopInstanceUid(updated.getSopInstanceUid());
+        result.setOrthancStudyId(updated.getOrthancStudyId());
+        result.setOrthancSeriesId(updated.getOrthancSeriesId());
+        result.setOrthancInstanceId(updated.getOrthancInstanceId());
+        result.setOhifViewerUrl(properties.buildViewerUrl(updated.getStudyInstanceUid()));
+        return result;
+    }
+
+    @Override
     public byte[] downloadDicom(Long id)
     {
         NdtDicomInstance instance = dicomInstanceMapper.selectNdtDicomInstanceById(id);
@@ -218,6 +286,68 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
             dicomInstanceMapper.updateNdtDicomInstance(instance);
         }
         return instance;
+    }
+
+    private NdtDicomInstance updateDicomIndexes(NdtDicomInstance original, Long userId, String username,
+            String orthancStudyId, String orthancSeriesId, String orthancInstanceId, JSONObject tags,
+            String studyUid, String seriesUid, String sopUid)
+    {
+        NdtDicomInstance updated = dicomInstanceMapper.selectNdtDicomInstanceById(original.getId());
+        if (updated == null)
+        {
+            throw new ServiceException("DICOM实例不存在，无法更新业务索引");
+        }
+        updated.setStudyInstanceUid(studyUid);
+        updated.setSeriesInstanceUid(seriesUid);
+        updated.setSopInstanceUid(sopUid);
+        updated.setOrthancStudyId(orthancStudyId);
+        updated.setOrthancSeriesId(orthancSeriesId);
+        updated.setOrthancInstanceId(orthancInstanceId);
+        updated.setModality(tag(tags, "Modality"));
+        updated.setSeriesNumber(tag(tags, "SeriesNumber"));
+        updated.setInstanceNumber(tag(tags, "InstanceNumber"));
+        updated.setSeriesDescription(tag(tags, "SeriesDescription"));
+        updated.setSopClassUid(tag(tags, "SOPClassUID"));
+        updated.setUploadUserId(userId);
+        updated.setUploadTime(new Date());
+        updated.setIntegrityStatus(NdtConstants.INTEGRITY_STATUS_UNKNOWN);
+        updated.setUpdateBy(username);
+        dicomInstanceMapper.updateNdtDicomInstance(updated);
+        return updated;
+    }
+
+    private void updateIntegrityRecordAndRelations(NdtDicomInstance original, NdtDicomInstance updated,
+            String oldOrthancInstanceId, String oldSopUid, String oldStudyUid, String oldSeriesUid,
+            String oldOrthancStudyId, String oldOrthancSeriesId, Long userId)
+    {
+        NdtDicomIntegrityRecord existing = integrityRecordMapper.selectNdtDicomIntegrityRecordBySopUid(oldSopUid);
+        if (existing != null)
+        {
+            existing.setStudyInstanceUid(updated.getStudyInstanceUid());
+            existing.setSeriesInstanceUid(updated.getSeriesInstanceUid());
+            existing.setSopInstanceUid(updated.getSopInstanceUid());
+            existing.setOrthancInstanceId(updated.getOrthancInstanceId());
+            existing.setImportUserId(userId);
+            existing.setImportTime(new Date());
+            existing.setVerifyStatus(NdtConstants.INTEGRITY_STATUS_UNKNOWN);
+            integrityRecordMapper.updateNdtDicomIntegrityRecord(existing);
+        }
+
+        NdtDicomObjectRelation relationQuery = new NdtDicomObjectRelation();
+        relationQuery.setTaskId(updated.getTaskId());
+        relationQuery.setSourceSopInstanceUid(oldSopUid);
+        List<NdtDicomObjectRelation> relations = objectRelationMapper.selectNdtDicomObjectRelationList(relationQuery);
+        if (relations != null)
+        {
+            for (NdtDicomObjectRelation relation : relations)
+            {
+                relation.setOrthancInstanceId(updated.getOrthancInstanceId());
+                relation.setRelatedSopInstanceUid(updated.getSopInstanceUid());
+                relation.setRelatedSeriesInstanceUid(updated.getSeriesInstanceUid());
+                relation.setCreateTime(new Date());
+                objectRelationMapper.insertNdtDicomObjectRelation(relation);
+            }
+        }
     }
 
     private void upsertIntegrityRecord(NdtDicomInstance instance, String fileSha256, Long userId)

@@ -13,6 +13,8 @@ public interface INdtDicomInstanceService
 
     NdtDicomUploadResult uploadDicom(Long taskId, MultipartFile file, Long userId, String username);
 
+    NdtDicomUploadResult replaceDicomTags(Long id, com.alibaba.fastjson2.JSONObject tags, Long userId, String username);
+
     byte[] downloadDicom(Long id);
 
     String getOhifViewerUrl(Long id);

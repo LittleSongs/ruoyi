@@ -82,6 +82,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         update ndt_dicom_integrity_record
            set study_instance_uid = #{studyInstanceUid},
                series_instance_uid = #{seriesInstanceUid},
+               sop_instance_uid = #{sopInstanceUid},
                orthanc_instance_id = #{orthancInstanceId},
                pixel_data_sha256 = #{pixelDataSha256},
                metadata_sha256 = #{metadataSha256},

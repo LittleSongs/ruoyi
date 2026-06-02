@@ -1,9 +1,12 @@
 package com.ruoyi.ndt.orthanc;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.ruoyi.ndt.dicom.domain.NdtDicomTagItem;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +15,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.ndt.dicom.domain.NdtDicomInstance;
+import com.ruoyi.ndt.dicom.domain.NdtDicomUploadResult;
 import com.ruoyi.ndt.dicom.service.INdtDicomInstanceService;
 
 /**
@@ -20,6 +24,9 @@ import com.ruoyi.ndt.dicom.service.INdtDicomInstanceService;
 @Service
 public class NdtOrthancService
 {
+    private static final Set<String> EDITABLE_TAG_WHITELIST = new HashSet<>(Arrays.asList("PatientName", "StudyDescription",
+            "SeriesDescription"));
+
     @Autowired
     private OrthancService orthancService;
 
@@ -81,14 +88,36 @@ public class NdtOrthancService
         JSONObject payload = new JSONObject();
         for (NdtDicomTagItem item : items)
         {
-            if (StringUtils.isEmpty(item.getTagName()))
+            if (item == null || StringUtils.isEmpty(item.getTagName()))
+            {
+                continue;
+            }
+            if (!isEditableTag(item.getTagName()))
+            {
+                continue;
+            }
+            if (item.getValue() == null)
+            {
+                continue;
+            }
+            if (item.getOriginalValue() != null && item.getOriginalValue().equals(item.getValue()))
             {
                 continue;
             }
             payload.put(item.getTagName(), item.getValue());
         }
-        orthancService.updateInstanceTags(instance.getOrthancInstanceId(), payload);
-        return selectTagsByInstanceId(dicomInstanceId);
+        if (payload.isEmpty())
+        {
+            return selectTagsByInstanceId(dicomInstanceId);
+        }
+        NdtDicomUploadResult result = dicomInstanceService.replaceDicomTags(dicomInstanceId, payload,
+                0L, "system");
+        return selectTagsByInstanceId(result.getDicomInstanceId());
+    }
+
+    public boolean isEditableTag(String tagName)
+    {
+        return StringUtils.isNotEmpty(tagName) && EDITABLE_TAG_WHITELIST.contains(tagName);
     }
 
     private List<NdtDicomTagItem> convertTags(JSONObject tags)

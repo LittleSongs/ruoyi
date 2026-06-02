@@ -131,18 +131,60 @@ public class OrthancService
         return result;
     }
 
+    public byte[] modifyInstance(String orthancInstanceId, JSONObject tags)
+    {
+        try
+        {
+            JSONObject payload = new JSONObject();
+            payload.put("Replace", tags);
+            payload.put("Force", Boolean.TRUE);
+            payload.put("KeepSource", Boolean.FALSE);
+
+            byte[] modifiedDicom = restClient.post().uri("/instances/{id}/modify", orthancInstanceId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload).retrieve().body(byte[].class);
+            if (modifiedDicom == null || modifiedDicom.length == 0)
+            {
+                throw new ServiceException("Orthanc 返回的修改后 DICOM 文件为空");
+            }
+            return modifiedDicom;
+        }
+        catch (RestClientResponseException ex)
+        {
+            throw responseException("生成 Orthanc 修改后 DICOM 失败", ex);
+        }
+        catch (ResourceAccessException ex)
+        {
+            throw unavailableException();
+        }
+    }
+
     public JSONObject updateInstanceTags(String orthancInstanceId, JSONObject tags)
     {
         try
         {
-            String response = restClient.put().uri("/instances/{id}/tags", orthancInstanceId)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(tags).retrieve().body(String.class);
-            return parseResponse(response, "更新标签响应");
+            byte[] modifiedDicom = modifyInstance(orthancInstanceId, tags);
+            return uploadInstance(modifiedDicom);
         }
         catch (RestClientResponseException ex)
         {
             throw responseException("更新 Orthanc Instance 标签失败", ex);
+        }
+        catch (ResourceAccessException ex)
+        {
+            throw unavailableException();
+        }
+    }
+
+    public void deleteInstance(String orthancInstanceId)
+    {
+        try
+        {
+            restClient.delete().uri("/instances/{id}", orthancInstanceId).retrieve().toBodilessEntity();
+        }
+        catch (RestClientResponseException ex)
+        {
+            throw responseException("删除 Orthanc Instance 失败", ex);
         }
         catch (ResourceAccessException ex)
         {
