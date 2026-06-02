@@ -56,7 +56,11 @@ public class NdtProperties
     public String buildViewerUrl(String studyInstanceUid, Long taskId, String token, Boolean canEvaluate)
     {
         String baseUrl = ohif.getViewerUrl();
-        String separator = baseUrl != null && baseUrl.contains("?") ? "&" : "?";
+        if (baseUrl == null || baseUrl.isEmpty())
+        {
+            return "";
+        }
+        String separator = baseUrl.contains("?") ? "&" : "?";
         StringBuilder builder = new StringBuilder(baseUrl)
                 .append(separator)
                 .append("StudyInstanceUIDs=")
@@ -73,10 +77,14 @@ public class NdtProperties
         {
             builder.append("&canEvaluate=").append(canEvaluate);
         }
-        //这里的ruoyiApiBase=http://localhost:3000，后续要改掉，不能这么设计，现在这样是为了在 ohif 前端项目中可以跳转。
         builder.append("&ruoyiApiBase=")
                 .append(URLEncoder.encode("http://localhost:3000", StandardCharsets.UTF_8));
         return builder.toString();
+    }
+
+    public String buildViewerUrl(String studyInstanceUid, Long taskId)
+    {
+        return buildViewerUrl(studyInstanceUid, taskId, null, null);
     }
 
     public static class Orthanc

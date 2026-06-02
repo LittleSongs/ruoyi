@@ -16,4 +16,6 @@ public interface INdtDicomInstanceService
     byte[] downloadDicom(Long id);
 
     String getOhifViewerUrl(Long id);
+
+    String buildOhifViewerUrl(String studyInstanceUid, Long taskId);
 }

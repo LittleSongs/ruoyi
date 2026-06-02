@@ -305,13 +305,38 @@ where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and pa
 insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
 select '评定结果管理', @ndt_parent_id, 6, 'evaluation', 'ndt/evaluation/index', '', '', 1, 0, 'C', '0', '0', 'ndt:evaluation:list', 'form', 'admin', sysdate(), 'NDT评定结果管理'
 where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'evaluation');
-
+insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
+select 'OHIF入口配置', @ndt_parent_id, 7, 'ohif', 'ndt/ohif/index', '', '', 1, 0, 'C', '0', '0', 'ndt:ohif:list', 'link', 'admin', sysdate(), 'NDT OHIF入口配置'
+where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'ohif');
+insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
+select 'Orthanc归档管理', @ndt_parent_id, 8, 'orthanc', 'ndt/orthanc/index', '', '', 1, 0, 'C', '0', '0', 'ndt:orthanc:list', 'tree', 'admin', sysdate(), 'NDT Orthanc归档管理'
+where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'orthanc');
+insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
+select '报告管理', @ndt_parent_id, 9, 'report', 'ndt/report/index', '', '', 1, 0, 'C', '0', '0', 'ndt:report:list', 'document', 'admin', sysdate(), 'NDT报告管理'
+where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'report');
 set @ndt_task_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'task' order by menu_id limit 1);
 set @ndt_dicom_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'dicom' order by menu_id limit 1);
 set @ndt_inspector_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'inspector' order by menu_id limit 1);
 set @ndt_uid_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'uidRule' order by menu_id limit 1);
 set @ndt_integrity_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'integrity' order by menu_id limit 1);
 set @ndt_evaluation_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'evaluation' order by menu_id limit 1);
+
+insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
+select 'DICOM标签管理', @ndt_dicom_id, 3, '', '', '', '', 1, 0, 'F', '0', '0', 'ndt:dicom:tag:list', '#', 'admin', sysdate(), 'NDT DICOM标签查看'
+where @ndt_dicom_id is not null
+  and not exists (select 1 from sys_menu where perms = 'ndt:dicom:tag:list' and menu_type = 'F');
+insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
+select 'DICOM标签新增', @ndt_dicom_id, 4, '', '', '', '', 1, 0, 'F', '0', '0', 'ndt:dicom:tag:add', '#', 'admin', sysdate(), ''
+where @ndt_dicom_id is not null
+  and not exists (select 1 from sys_menu where perms = 'ndt:dicom:tag:add' and menu_type = 'F');
+insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
+select 'DICOM标签修改', @ndt_dicom_id, 5, '', '', '', '', 1, 0, 'F', '0', '0', 'ndt:dicom:tag:edit', '#', 'admin', sysdate(), ''
+where @ndt_dicom_id is not null
+  and not exists (select 1 from sys_menu where perms = 'ndt:dicom:tag:edit' and menu_type = 'F');
+insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
+select 'DICOM标签删除', @ndt_dicom_id, 6, '', '', '', '', 1, 0, 'F', '0', '0', 'ndt:dicom:tag:remove', '#', 'admin', sysdate(), ''
+where @ndt_dicom_id is not null
+  and not exists (select 1 from sys_menu where perms = 'ndt:dicom:tag:remove' and menu_type = 'F');
 
 insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
 select '任务查询', @ndt_task_id, 1, '', '', '', '', 1, 0, 'F', '0', '0', 'ndt:task:query', '#', 'admin', sysdate(), ''

@@ -155,7 +155,17 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
             throw new ServiceException("DICOM实例不存在");
         }
         accessService.checkViewTask(instance.getTaskId());
-        return properties.buildViewerUrl(instance.getStudyInstanceUid());
+        return buildOhifViewerUrl(instance.getStudyInstanceUid(), instance.getTaskId());
+    }
+
+    @Override
+    public String buildOhifViewerUrl(String studyInstanceUid, Long taskId)
+    {
+        if (StringUtils.isEmpty(studyInstanceUid))
+        {
+            throw new ServiceException("StudyInstanceUID不能为空");
+        }
+        return properties.buildViewerUrl(studyInstanceUid, taskId);
     }
 
     private byte[] readFile(MultipartFile file)
