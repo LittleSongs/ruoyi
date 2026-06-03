@@ -23,6 +23,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <where>
             <if test="taskId != null">and task_id = #{taskId}</if>
             <if test="sourceSopInstanceUid != null and sourceSopInstanceUid != ''">and source_sop_instance_uid = #{sourceSopInstanceUid}</if>
+            <if test="relatedSopInstanceUid != null and relatedSopInstanceUid != ''">and related_sop_instance_uid = #{relatedSopInstanceUid}</if>
             <if test="relatedType != null and relatedType != ''">and related_type = #{relatedType}</if>
             <if test="evaluationId != null">and evaluation_id = #{evaluationId}</if>
         </where>
