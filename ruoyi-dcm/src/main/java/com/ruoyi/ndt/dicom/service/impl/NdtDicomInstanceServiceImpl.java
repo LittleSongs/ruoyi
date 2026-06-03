@@ -184,10 +184,11 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
             throw new ServiceException("当前替换后的 DICOM 属于不同 StudyInstanceUID，不允许直接替换当前业务实例");
         }
 
+        String newFileSha256 = integrityService.calculateSha256(modifiedDicom);
         NdtDicomInstance updated = updateDicomIndexes(original, userId, username, newOrthancStudyId, newOrthancSeriesId,
                 newOrthancInstanceId, mergedTags, newStudyUid, newSeriesUid, newSopUid);
         updateIntegrityRecordAndRelations(original, updated, oldOrthancInstanceId, oldSopUid, oldStudyUid,
-                oldSeriesUid, oldOrthancStudyId, oldOrthancSeriesId, userId);
+                oldSeriesUid, oldOrthancStudyId, oldOrthancSeriesId, userId, newFileSha256);
 
         NdtDicomUploadResult result = new NdtDicomUploadResult();
         result.setTaskId(updated.getTaskId());
@@ -318,7 +319,7 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
 
     private void updateIntegrityRecordAndRelations(NdtDicomInstance original, NdtDicomInstance updated,
             String oldOrthancInstanceId, String oldSopUid, String oldStudyUid, String oldSeriesUid,
-            String oldOrthancStudyId, String oldOrthancSeriesId, Long userId)
+            String oldOrthancStudyId, String oldOrthancSeriesId, Long userId, String newFileSha256)
     {
         NdtDicomIntegrityRecord existing = integrityRecordMapper.selectNdtDicomIntegrityRecordBySopUid(oldSopUid);
         if (existing != null)
@@ -327,6 +328,7 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
             existing.setSeriesInstanceUid(updated.getSeriesInstanceUid());
             existing.setSopInstanceUid(updated.getSopInstanceUid());
             existing.setOrthancInstanceId(updated.getOrthancInstanceId());
+            existing.setFileSha256(newFileSha256);
             existing.setImportUserId(userId);
             existing.setImportTime(new Date());
             existing.setVerifyStatus(NdtConstants.INTEGRITY_STATUS_UNKNOWN);

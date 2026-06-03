@@ -119,6 +119,7 @@
 <script setup name="NdtDicom">
 import { listDicom, getDicom, getDicomTags, updateDicomTag } from '@/api/ndt/dicom'
 import { getOrthancHierarchy } from '@/api/ndt/orthanc'
+import { getTaskOhif } from '@/api/ndt/task'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -195,7 +196,7 @@ function saveTags() {
   })
 }
 function jumpOhif(row) {
-  window.open(row.ohifViewerUrl || '#', '_blank')
+  getTaskOhif(row.id).then(res => { window.open(res.data, "_blank") })
 }
 function openDicomFromRoute() {
   const dicomInstanceId = route.query.dicomInstanceId
