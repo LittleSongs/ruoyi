@@ -24,14 +24,19 @@
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-row :gutter="12">
-      <el-col :span="7">
+    <div class="split-layout" @mouseup="stopDragging" @mouseleave="stopDragging">
+      <div class="split-left" :style="leftPaneStyle">
         <el-card shadow="never" class="tree-card">
           <template #header>Orthanc归档树</template>
           <el-tree ref="treeRef" :data="treeData" node-key="id" :props="treeProps" highlight-current default-expand-all @node-click="handleTreeClick" />
         </el-card>
-      </el-col>
-      <el-col :span="17">
+      </div>
+
+      <div class="splitter" :class="{ dragging: isDragging }" @mousedown.prevent="startDragging">
+        <div class="splitter-handle"></div>
+      </div>
+
+      <div class="split-right" :style="rightPaneStyle">
         <el-card shadow="never">
           <template #header>
             <div class="card-header">
@@ -44,11 +49,12 @@
             <el-table-column label="StudyUID" prop="studyInstanceUid" min-width="220" :show-overflow-tooltip="true" />
             <el-table-column label="SeriesUID" prop="seriesInstanceUid" min-width="220" :show-overflow-tooltip="true" />
             <el-table-column label="SOPUID" prop="sopInstanceUid" min-width="220" :show-overflow-tooltip="true" />
+            <el-table-column label="Modality" prop="modality" min-width="120" align="center" />
             <el-table-column label="Orthanc实例" prop="orthancInstanceId" min-width="160" :show-overflow-tooltip="true" />
-            <el-table-column label="操作" width="280" align="center">
+            <el-table-column label="操作" width="280" align="center" fixed="right">
               <template #default="scope">
                 <el-button link type="primary" icon="View" @click="viewInstance(scope.row)">查看</el-button>
-                <el-button link type="primary" icon="Edit" @click="openTagDialog(scope.row.id)">编辑Tag</el-button>
+                <el-button link type="primary" icon="Edit" @click="openTagDialog(scope.row.id)">编辑标签</el-button>
                 <el-button link type="primary" icon="Link" @click="jumpOhif(scope.row)">OHIF</el-button>
               </template>
             </el-table-column>
@@ -75,11 +81,11 @@
           </template>
           <el-empty v-else description="请选择左侧树节点或列表中的实例查看详情" />
         </el-card>
-      </el-col>
-    </el-row>
+      </div>
+    </div>
 
-    <el-dialog v-model="tagDialogVisible" title="DICOM Tag 管理" width="960px" append-to-body>
-      <el-alert title="仅允许编辑白名单内的标量标签（PatientName、StudyDescription、SeriesDescription），其他字段已锁定。" type="info" show-icon class="mb12" />
+    <el-dialog v-model="tagDialogVisible" title="DICOM 标签管理" width="1000px" append-to-body>
+      <el-alert title="仅允许编辑白名单内的标量标签（PatientName、StudyDescription、SeriesDescription），其他字段已锁定。" type="warning" show-icon class="mb-16" />
       <el-table :data="tagItems" max-height="520">
         <el-table-column label="Tag名" min-width="200">
           <template #default="scope">
@@ -137,17 +143,64 @@ const tagItems = ref([])
 const treeProps = { children: 'children', label: 'title' }
 const EDITABLE_TAGS = new Set(['PatientName', 'StudyDescription', 'SeriesDescription'])
 const queryParams = reactive({ pageNum: 1, pageSize: 10, taskNo: undefined, workpieceName: undefined, studyInstanceUid: undefined, sopInstanceUid: undefined })
+const leftPaneWidth = ref(25)
+const isDragging = ref(false)
+const minLeftWidth = 18
+const maxLeftWidth = 60
 
 function getList() {
   loading.value = true
-  listDicom(queryParams).then(res => { dicomList.value = res.rows; total.value = res.total }).finally(() => { loading.value = false })
+  listDicom(queryParams)
+    .then((res) => {
+      dicomList.value = res.rows
+      total.value = res.total
+    })
+    .finally(() => {
+      loading.value = false
+    })
 }
-function handleQuery() { queryParams.pageNum = 1; getList() }
-function resetQuery() { proxy.resetForm('queryRef'); handleQuery() }
-function loadHierarchy() { getOrthancHierarchy(queryParams).then(res => { treeData.value = res.data || [] }) }
+function handleQuery() {
+  queryParams.pageNum = 1
+  getList()
+}
+function resetQuery() {
+  proxy.resetForm('queryRef')
+  handleQuery()
+}
+function loadHierarchy() {
+  getOrthancHierarchy(queryParams).then((res) => {
+    treeData.value = res.data || []
+  })
+}
 function extractDicomInstanceId(node) {
   if (!node || node.nodeType !== 'INSTANCE') return null
   return node.dicomInstanceId || node.id
+}
+const leftPaneStyle = computed(() => ({ flex: `0 0 ${leftPaneWidth.value}%`, maxWidth: `${leftPaneWidth.value}%` }))
+const rightPaneStyle = computed(() => ({ flex: `1 1 ${100 - leftPaneWidth.value}%`, minWidth: '0' }))
+function clampWidth(value) {
+  return Math.min(maxLeftWidth, Math.max(minLeftWidth, value))
+}
+function startDragging() {
+  isDragging.value = true
+  const onMouseMove = (e) => {
+    const container = document.querySelector('.split-layout')
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    const nextWidth = ((e.clientX - rect.left) / rect.width) * 100
+    leftPaneWidth.value = clampWidth(nextWidth)
+  }
+  const stop = () => {
+    isDragging.value = false
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', stop)
+  }
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', stop)
+}
+function stopDragging() {
+  if (!isDragging.value) return
+  isDragging.value = false
 }
 function viewInstance(row) {
   currentDicomId.value = row.id
@@ -155,7 +208,7 @@ function viewInstance(row) {
   highlightTreeNode(row.id)
 }
 function highlightTreeNode(dicomInstanceId) {
-  const walk = nodes => {
+  const walk = (nodes) => {
     for (const node of nodes || []) {
       if (String(node.dicomInstanceId || node.id) === String(dicomInstanceId)) {
         treeRef.value?.setCurrentKey(node.id)
@@ -172,31 +225,40 @@ function handleTreeClick(node) {
   if (id) {
     currentDicomId.value = id
     currentDicomDetail.value = node
-    getDicom(id).then(res => { currentDicomDetail.value = res.data || currentDicomDetail.value })
+    getDicom(id).then((res) => {
+      currentDicomDetail.value = res.data || currentDicomDetail.value
+    })
   } else {
     currentDicomDetail.value = node
   }
 }
 function openTagDialog(id) {
   currentDicomId.value = id
-  getDicomTags(id).then(res => {
-    tagItems.value = (res.data || []).map(item => ({ ...item, editable: EDITABLE_TAGS.has(item.tagName) }))
+  getDicomTags(id).then((res) => {
+    tagItems.value = (res.data || []).map((item) => ({ ...item, editable: EDITABLE_TAGS.has(item.tagName) }))
     tagDialogVisible.value = true
   })
 }
-function removeTagRow(index) { if (tagItems.value[index]?.editable) tagItems.value.splice(index, 1) }
+function removeTagRow(index) {
+  if (tagItems.value[index]?.editable) tagItems.value.splice(index, 1)
+}
 function saveTags() {
   updateDicomTag(currentDicomId.value, tagItems.value).then(() => {
     proxy.$modal.msgSuccess('保存成功')
     tagDialogVisible.value = false
-    getList(); loadHierarchy()
+    getList()
+    loadHierarchy()
     if (currentDicomId.value) {
-      getDicom(currentDicomId.value).then(res => { currentDicomDetail.value = res.data || null })
+      getDicom(currentDicomId.value).then((res) => {
+        currentDicomDetail.value = res.data || null
+      })
     }
   })
 }
 function jumpOhif(row) {
-  getTaskOhif(row.id).then(res => { window.open(res.data, "_blank") })
+  getTaskOhif(row.id).then((res) => {
+    window.open(res.data, '_blank')
+  })
 }
 function openDicomFromRoute() {
   const dicomInstanceId = route.query.dicomInstanceId
@@ -204,7 +266,7 @@ function openDicomFromRoute() {
   const id = Number(dicomInstanceId)
   if (Number.isNaN(id)) return
   currentDicomId.value = id
-  getDicom(id).then(res => {
+  getDicom(id).then((res) => {
     currentDicomDetail.value = res.data || null
     highlightTreeNode(id)
   })
@@ -214,15 +276,82 @@ onMounted(() => {
   loadHierarchy()
   openDicomFromRoute()
 })
-watch(() => route.query.dicomInstanceId, () => {
-  openDicomFromRoute()
-})
+watch(
+  () => route.query.dicomInstanceId,
+  () => {
+    openDicomFromRoute()
+  },
+)
 </script>
 
 <style scoped>
-.tree-card { min-height: 720px; }
-.detail-card { min-height: 260px; }
-.mt12 { margin-top: 12px; }
-.card-header { display: flex; justify-content: space-between; align-items: center; }
-.dialog-actions { margin-top: 12px; }
+.split-layout {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-height: 980px;
+}
+
+.split-left,
+.split-right {
+  min-width: 0;
+}
+
+.split-left {
+  overflow: hidden;
+}
+
+.split-right {
+  overflow: hidden;
+}
+
+.splitter {
+  width: 10px;
+  cursor: col-resize;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  position: relative;
+  user-select: none;
+}
+
+.splitter::before {
+  content: '';
+  width: 1px;
+  background: #dcdfe6;
+  height: 100%;
+}
+
+.splitter-handle {
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 56px;
+  margin-top: -28px;
+  border-radius: 4px;
+  background: #c0c4cc;
+}
+
+.splitter:hover .splitter-handle,
+.splitter.dragging .splitter-handle {
+  background: var(--el-color-primary);
+}
+
+.tree-card {
+  min-height: 720px;
+}
+.detail-card {
+  min-height: 260px;
+}
+.mt12 {
+  margin-top: 12px;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dialog-actions {
+  margin-top: 12px;
+}
 </style>

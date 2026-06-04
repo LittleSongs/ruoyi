@@ -25,7 +25,7 @@
           <template #header>
             <div class="card-header">
               <span>当前节点信息</span>
-              <el-button v-if="selectedInstanceId" type="primary" plain size="small" @click="goDicomTagEdit">去 DICOM 文件管理编辑 Tag</el-button>
+              <el-button v-if="selectedInstanceId" type="primary" plain size="small" @click="goDicomTagEdit">去 DICOM 文件管理编辑标签</el-button>
             </div>
           </template>
           <el-descriptions :column="2" border v-if="selectedNode">
