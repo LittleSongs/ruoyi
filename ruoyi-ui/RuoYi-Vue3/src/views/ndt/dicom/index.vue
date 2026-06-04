@@ -81,6 +81,33 @@
           </template>
           <el-empty v-else description="请选择左侧树节点或列表中的实例查看详情" />
         </el-card>
+
+        <el-card shadow="never" class="tag-card mt12">
+          <template #header>
+            <div class="card-header">
+              <span>DICOM 标签内容</span>
+              <div class="tag-card-actions">
+                <el-input v-model="readonlyTagKeyword" placeholder="搜索显示名称 / Tag名 / 值 / 原值" clearable prefix-icon="Search" class="tag-search-input" />
+                <el-button v-if="currentDicomId" type="primary" plain icon="Refresh" @click="loadReadonlyTags(currentDicomId)">刷新</el-button>
+              </div>
+            </div>
+          </template>
+          <el-table v-if="currentDicomId" v-loading="readonlyTagLoading" :data="filteredReadonlyTagItems" max-height="520" border>
+            <el-table-column label="显示名称" min-width="160" :show-overflow-tooltip="true">
+              <template #default="scope">{{ scope.row.tagLabel || scope.row.tagName }}</template>
+            </el-table-column>
+            <el-table-column label="Tag名" prop="tagName" min-width="210" :show-overflow-tooltip="true" />
+            <el-table-column label="值" prop="value" min-width="300" :show-overflow-tooltip="true" />
+            <el-table-column label="原值" prop="originalValue" min-width="300" :show-overflow-tooltip="true" />
+            <el-table-column label="可编辑" width="100" align="center">
+              <template #default="scope">
+                <el-tag v-if="scope.row.editable" type="success">是</el-tag>
+                <el-tag v-else type="info">否</el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="请选择左侧树节点或列表中的实例查看标签内容" />
+        </el-card>
       </div>
     </div>
 
@@ -159,6 +186,9 @@ const currentDicomId = ref(null)
 const currentDicomDetail = ref(null)
 const tagDialogVisible = ref(false)
 const tagItems = ref([])
+const readonlyTagItems = ref([])
+const readonlyTagLoading = ref(false)
+const readonlyTagKeyword = ref('')
 const tagOptions = ref([])
 const selectedAddTagName = ref()
 const treeProps = { children: 'children', label: 'title' }
@@ -198,6 +228,14 @@ function extractDicomInstanceId(node) {
 }
 const leftPaneStyle = computed(() => ({ flex: `0 0 ${leftPaneWidth.value}%`, maxWidth: `${leftPaneWidth.value}%` }))
 const rightPaneStyle = computed(() => ({ flex: `1 1 ${100 - leftPaneWidth.value}%`, minWidth: '0' }))
+const filteredReadonlyTagItems = computed(() => {
+  const keyword = readonlyTagKeyword.value.trim().toLowerCase()
+  if (!keyword) return readonlyTagItems.value
+  return readonlyTagItems.value.filter((item) =>
+    [item.tagLabel, item.tagName, item.value, item.originalValue]
+      .some((value) => String(value ?? '').toLowerCase().includes(keyword)),
+  )
+})
 function clampWidth(value) {
   return Math.min(maxLeftWidth, Math.max(minLeftWidth, value))
 }
@@ -226,6 +264,21 @@ function viewInstance(row) {
   currentDicomId.value = row.id
   currentDicomDetail.value = row
   highlightTreeNode(row.id)
+  loadReadonlyTags(row.id)
+}
+function loadReadonlyTags(id) {
+  if (!id) {
+    readonlyTagItems.value = []
+    return
+  }
+  readonlyTagLoading.value = true
+  getDicomTags(id)
+    .then((res) => {
+      readonlyTagItems.value = res.data || []
+    })
+    .finally(() => {
+      readonlyTagLoading.value = false
+    })
 }
 function highlightTreeNode(dicomInstanceId) {
   const walk = (nodes) => {
@@ -245,11 +298,14 @@ function handleTreeClick(node) {
   if (id) {
     currentDicomId.value = id
     currentDicomDetail.value = node
+    loadReadonlyTags(id)
     getDicom(id).then((res) => {
       currentDicomDetail.value = res.data || currentDicomDetail.value
     })
   } else {
+    currentDicomId.value = null
     currentDicomDetail.value = node
+    readonlyTagItems.value = []
   }
 }
 function openTagDialog(id) {
@@ -297,6 +353,7 @@ function saveTags() {
     getList()
     loadHierarchy()
     if (currentDicomId.value) {
+      loadReadonlyTags(currentDicomId.value)
       getDicom(currentDicomId.value).then((res) => {
         currentDicomDetail.value = res.data || null
       })
@@ -314,6 +371,7 @@ function openDicomFromRoute() {
   const id = Number(dicomInstanceId)
   if (Number.isNaN(id)) return
   currentDicomId.value = id
+  loadReadonlyTags(id)
   getDicom(id).then((res) => {
     currentDicomDetail.value = res.data || null
     highlightTreeNode(id)
@@ -391,6 +449,9 @@ watch(
 .detail-card {
   min-height: 260px;
 }
+.tag-card {
+  min-height: 360px;
+}
 .mt12 {
   margin-top: 12px;
 }
@@ -398,6 +459,14 @@ watch(
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.tag-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tag-search-input {
+  width: 280px;
 }
 .dialog-actions {
   margin-top: 12px;
