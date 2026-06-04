@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.dicom.mapper.NdtDicomPrivateTagMapper">
+    <resultMap type="NdtDicomPrivateTag" id="NdtDicomPrivateTagResult">
+        <id property="id" column="id"/>
+        <result property="tagName" column="tag_name"/>
+        <result property="tagLabel" column="tag_label"/>
+        <result property="tagCode" column="tag_code"/>
+        <result property="vr" column="vr"/>
+        <result property="defaultValue" column="default_value"/>
+        <result property="enabled" column="enabled"/>
+        <result property="builtin" column="builtin"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectNdtDicomPrivateTagVo">
+        select id, tag_name, tag_label, tag_code, vr, default_value, enabled, builtin,
+               remark, create_by, create_time, update_by, update_time, del_flag
+          from ndt_dicom_private_tag
+    </sql>
+
+    <select id="selectNdtDicomPrivateTagList" parameterType="NdtDicomPrivateTag" resultMap="NdtDicomPrivateTagResult">
+        <include refid="selectNdtDicomPrivateTagVo"/>
+        <where>
+            del_flag = '0'
+            <if test="tagName != null and tagName != ''">and tag_name like concat('%', #{tagName}, '%')</if>
+            <if test="tagLabel != null and tagLabel != ''">and tag_label like concat('%', #{tagLabel}, '%')</if>
+            <if test="enabled != null and enabled != ''">and enabled = #{enabled}</if>
+        </where>
+        order by id asc
+    </select>
+
+    <select id="selectEnabledNdtDicomPrivateTagList" resultMap="NdtDicomPrivateTagResult">
+        <include refid="selectNdtDicomPrivateTagVo"/>
+        where del_flag = '0' and enabled = '1'
+        order by id asc
+    </select>
+
+    <select id="selectNdtDicomPrivateTagById" parameterType="Long" resultMap="NdtDicomPrivateTagResult">
+        <include refid="selectNdtDicomPrivateTagVo"/>
+        where id = #{id} and del_flag = '0'
+    </select>
+
+    <select id="selectNdtDicomPrivateTagByName" parameterType="String" resultMap="NdtDicomPrivateTagResult">
+        <include refid="selectNdtDicomPrivateTagVo"/>
+        where tag_name = #{tagName} and del_flag = '0' limit 1
+    </select>
+
+    <insert id="insertNdtDicomPrivateTag" parameterType="NdtDicomPrivateTag" useGeneratedKeys="true" keyProperty="id">
+        insert into ndt_dicom_private_tag
+        (tag_name, tag_label, tag_code, vr, default_value, enabled, builtin,
+         remark, create_by, create_time, update_by, update_time, del_flag)
+        values
+        (#{tagName}, #{tagLabel}, #{tagCode}, #{vr}, #{defaultValue}, #{enabled}, #{builtin},
+         #{remark}, #{createBy}, sysdate(), #{updateBy}, sysdate(), #{delFlag})
+    </insert>
+
+    <update id="updateNdtDicomPrivateTag" parameterType="NdtDicomPrivateTag">
+        update ndt_dicom_private_tag
+           set tag_name = #{tagName},
+               tag_label = #{tagLabel},
+               tag_code = #{tagCode},
+               vr = #{vr},
+               default_value = #{defaultValue},
+               enabled = #{enabled},
+               builtin = #{builtin},
+               remark = #{remark},
+               update_by = #{updateBy},
+               update_time = sysdate(),
+               del_flag = #{delFlag}
+         where id = #{id}
+    </update>
+
+    <update id="softDeleteNdtDicomPrivateTagByIds" parameterType="Long">
+        update ndt_dicom_private_tag set del_flag = '2', update_time = sysdate()
+        where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </update>
+</mapper>

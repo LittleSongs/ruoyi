@@ -69,6 +69,11 @@ public class OrthancService
         return get("/instances/{id}/tags?simplify", orthancInstanceId, "Instance标签");
     }
 
+    public JSONObject getInstanceTags(String orthancInstanceId)
+    {
+        return get("/instances/{id}/tags", orthancInstanceId, "Instance完整标签");
+    }
+
     public JSONObject getSeries(String orthancSeriesId)
     {
         return get("/series/{id}", orthancSeriesId, "Series");
@@ -137,6 +142,7 @@ public class OrthancService
         {
             JSONObject payload = new JSONObject();
             payload.put("Replace", tags);
+            payload.put("PrivateCreator", "RuoYiNDT");
             payload.put("Force", Boolean.TRUE);
             payload.put("KeepSource", Boolean.FALSE);
 

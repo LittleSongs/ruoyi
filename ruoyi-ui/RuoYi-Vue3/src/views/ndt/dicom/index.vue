@@ -84,12 +84,31 @@
       </div>
     </div>
 
-    <el-dialog v-model="tagDialogVisible" title="DICOM 标签管理" width="1000px" append-to-body>
-      <el-alert title="仅允许编辑白名单内的标量标签（PatientName、StudyDescription、SeriesDescription），其他字段已锁定。" type="warning" show-icon class="mb-16" />
+    <el-dialog v-model="tagDialogVisible" title="DICOM 标签管理" width="1200px" :close-on-click-modal="false">
+      <!-- <el-alert title="仅允许编辑已在“DICOM私有标签”菜单启用的标签；保存会生成修改后的DICOM并同步更新完整性校验记录。" type="warning" show-icon/> -->
+      <el-row :gutter="12">
+        <el-col :span="18">
+          <el-select v-model="selectedAddTagName" filterable clearable placeholder="请选择要新增的标签" style="width: 100%">
+            <el-option v-for="tag in tagOptions" :key="tag.tagName" :label="`${tag.tagLabel} / ${tag.tagName}`" :value="tag.tagName">
+              <span>{{ tag.tagLabel }}</span>
+              <span class="tag-option-name">{{ tag.tagName }}</span>
+            </el-option>
+          </el-select>
+        </el-col>
+        <el-col :span="6">
+          <el-button type="primary" icon="Plus" style="width: 100%" :disabled="!selectedAddTagName" @click="addConfiguredTag" v-hasPermi="['ndt:dicom:tag:add']">添加标签</el-button>
+        </el-col>
+      </el-row>
+      <br />
       <el-table :data="tagItems" max-height="520">
-        <el-table-column label="Tag名" min-width="200">
+        <el-table-column label="显示名称" min-width="160">
           <template #default="scope">
-            <el-input v-model="scope.row.tagName" placeholder="例如 StudyDescription" disabled />
+            <el-input :model-value="scope.row.tagLabel || scope.row.tagName" disabled />
+          </template>
+        </el-table-column>
+        <el-table-column label="Tag名" min-width="210">
+          <template #default="scope">
+            <el-input v-model="scope.row.tagName" disabled />
           </template>
         </el-table-column>
         <el-table-column label="值" min-width="280">
@@ -110,7 +129,7 @@
         </el-table-column>
         <el-table-column label="操作" width="100" align="center">
           <template #default="scope">
-            <el-button link type="danger" icon="Delete" :disabled="!scope.row.editable" @click="removeTagRow(scope.$index)">删除</el-button>
+            <el-button link type="danger" icon="Delete" :disabled="!scope.row.editable || !scope.row.newlyAdded" @click="removeTagRow(scope.$index)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -123,7 +142,7 @@
 </template>
 
 <script setup name="NdtDicom">
-import { listDicom, getDicom, getDicomTags, updateDicomTag } from '@/api/ndt/dicom'
+import { listDicom, getDicom, getDicomTags, getDicomTagOptions, updateDicomTag } from '@/api/ndt/dicom'
 import { getOrthancHierarchy } from '@/api/ndt/orthanc'
 import { getTaskOhif } from '@/api/ndt/task'
 import { useRoute } from 'vue-router'
@@ -140,8 +159,9 @@ const currentDicomId = ref(null)
 const currentDicomDetail = ref(null)
 const tagDialogVisible = ref(false)
 const tagItems = ref([])
+const tagOptions = ref([])
+const selectedAddTagName = ref()
 const treeProps = { children: 'children', label: 'title' }
-const EDITABLE_TAGS = new Set(['PatientName', 'StudyDescription', 'SeriesDescription'])
 const queryParams = reactive({ pageNum: 1, pageSize: 10, taskNo: undefined, workpieceName: undefined, studyInstanceUid: undefined, sopInstanceUid: undefined })
 const leftPaneWidth = ref(25)
 const isDragging = ref(false)
@@ -234,13 +254,41 @@ function handleTreeClick(node) {
 }
 function openTagDialog(id) {
   currentDicomId.value = id
-  getDicomTags(id).then((res) => {
-    tagItems.value = (res.data || []).map((item) => ({ ...item, editable: EDITABLE_TAGS.has(item.tagName) }))
+  selectedAddTagName.value = undefined
+  Promise.all([getDicomTags(id), getDicomTagOptions(id)]).then(([tags, options]) => {
+    tagItems.value = tags.data || []
+    tagOptions.value = options.data || []
     tagDialogVisible.value = true
   })
 }
+function addConfiguredTag() {
+  const tag = tagOptions.value.find((item) => item.tagName === selectedAddTagName.value)
+  if (!tag) return
+  tagItems.value.push({
+    tagName: tag.tagName,
+    tagLabel: tag.tagLabel,
+    vr: tag.vr,
+    value: tag.defaultValue || '',
+    originalValue: '',
+    editable: true,
+    configured: true,
+    newlyAdded: true,
+  })
+  tagOptions.value = tagOptions.value.filter((item) => item.tagName !== tag.tagName)
+  selectedAddTagName.value = undefined
+}
 function removeTagRow(index) {
-  if (tagItems.value[index]?.editable) tagItems.value.splice(index, 1)
+  const removed = tagItems.value[index]
+  if (!removed?.editable || !removed?.newlyAdded) return
+  tagItems.value.splice(index, 1)
+  if (removed.configured && !tagOptions.value.some((item) => item.tagName === removed.tagName)) {
+    tagOptions.value.push({
+      tagName: removed.tagName,
+      tagLabel: removed.tagLabel || removed.tagName,
+      vr: removed.vr,
+      defaultValue: removed.value || '',
+    })
+  }
 }
 function saveTags() {
   updateDicomTag(currentDicomId.value, tagItems.value).then(() => {
@@ -353,5 +401,10 @@ watch(
 }
 .dialog-actions {
   margin-top: 12px;
+}
+.tag-option-name {
+  float: right;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 </style>

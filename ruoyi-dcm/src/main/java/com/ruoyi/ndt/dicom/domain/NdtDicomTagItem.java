@@ -10,10 +10,12 @@ public class NdtDicomTagItem implements Serializable
     private static final long serialVersionUID = 1L;
 
     private String tagName;
+    private String tagLabel;
     private String vr;
     private String value;
     private String originalValue;
     private Boolean editable;
+    private Boolean configured;
 
     public String getTagName()
     {
@@ -23,6 +25,16 @@ public class NdtDicomTagItem implements Serializable
     public void setTagName(String tagName)
     {
         this.tagName = tagName;
+    }
+
+    public String getTagLabel()
+    {
+        return tagLabel;
+    }
+
+    public void setTagLabel(String tagLabel)
+    {
+        this.tagLabel = tagLabel;
     }
 
     public String getVr()
@@ -63,5 +75,15 @@ public class NdtDicomTagItem implements Serializable
     public void setEditable(Boolean editable)
     {
         this.editable = editable;
+    }
+
+    public Boolean getConfigured()
+    {
+        return configured;
+    }
+
+    public void setConfigured(Boolean configured)
+    {
+        this.configured = configured;
     }
 }

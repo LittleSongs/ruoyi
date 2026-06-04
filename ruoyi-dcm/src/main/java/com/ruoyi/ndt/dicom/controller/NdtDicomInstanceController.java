@@ -75,6 +75,13 @@ public class NdtDicomInstanceController extends BaseController
         return success(orthancService.selectTagsByInstanceId(id));
     }
 
+    @PreAuthorize("@ss.hasPermi('ndt:dicom:tag:list')")
+    @GetMapping("/{id}/tag-options")
+    public AjaxResult tagOptions(@PathVariable Long id)
+    {
+        return success(orthancService.selectAddableTagsByInstanceId(id));
+    }
+
     @PreAuthorize("@ss.hasPermi('ndt:dicom:tag:edit')")
     @Log(title = "NDT DICOM标签", businessType = BusinessType.UPDATE)
     @PutMapping("/{id}/tags")

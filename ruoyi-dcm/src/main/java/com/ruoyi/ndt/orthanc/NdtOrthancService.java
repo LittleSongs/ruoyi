@@ -1,12 +1,10 @@
 package com.ruoyi.ndt.orthanc;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.ruoyi.ndt.dicom.domain.NdtDicomTagItem;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,9 +12,11 @@ import org.springframework.stereotype.Service;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.ndt.dicom.domain.NdtDicomPrivateTag;
 import com.ruoyi.ndt.dicom.domain.NdtDicomInstance;
 import com.ruoyi.ndt.dicom.domain.NdtDicomUploadResult;
 import com.ruoyi.ndt.dicom.service.INdtDicomInstanceService;
+import com.ruoyi.ndt.dicom.service.INdtDicomPrivateTagService;
 
 /**
  * Orthanc hierarchy and tag helper service.
@@ -24,14 +24,14 @@ import com.ruoyi.ndt.dicom.service.INdtDicomInstanceService;
 @Service
 public class NdtOrthancService
 {
-    private static final Set<String> EDITABLE_TAG_WHITELIST = new HashSet<>(Arrays.asList("PatientName", "StudyDescription",
-            "SeriesDescription"));
-
     @Autowired
     private OrthancService orthancService;
 
     @Autowired
     private INdtDicomInstanceService dicomInstanceService;
+
+    @Autowired
+    private INdtDicomPrivateTagService privateTagService;
 
     public List<NdtOrthancHierarchyNode> selectHierarchy(String taskNo, String workpieceName)
     {
@@ -74,8 +74,18 @@ public class NdtOrthancService
         {
             return new ArrayList<>();
         }
-        JSONObject tags = orthancService.getInstanceSimplifiedTags(instance.getOrthancInstanceId());
+        JSONObject tags = orthancService.getInstanceTags(instance.getOrthancInstanceId());
         return convertTags(tags);
+    }
+
+    public List<NdtDicomPrivateTag> selectAddableTagsByInstanceId(Long dicomInstanceId)
+    {
+        List<String> existingTagNames = selectTagsByInstanceId(dicomInstanceId).stream()
+                .map(NdtDicomTagItem::getTagName)
+                .collect(Collectors.toList());
+        return privateTagService.selectEnabledNdtDicomPrivateTagList().stream()
+                .filter(tag -> !existingTagNames.contains(tag.getTagName()))
+                .collect(Collectors.toList());
     }
 
     public List<NdtDicomTagItem> updateTags(Long dicomInstanceId, List<NdtDicomTagItem> items)
@@ -92,7 +102,12 @@ public class NdtOrthancService
             {
                 continue;
             }
-            if (!isEditableTag(item.getTagName()))
+            if (!Boolean.TRUE.equals(item.getEditable()))
+            {
+                continue;
+            }
+            NdtDicomPrivateTag configuredTag = privateTagService.selectEnabledTagByNameOrCode(item.getTagName());
+            if (configuredTag == null)
             {
                 continue;
             }
@@ -104,7 +119,13 @@ public class NdtOrthancService
             {
                 continue;
             }
-            payload.put(item.getTagName(), item.getValue());
+            if (isNdtPrivateTag(configuredTag))
+            {
+                payload.put("0011,0010", "RuoYiNDT");
+                payload.put(configuredTag.getTagCode(), item.getValue());
+                continue;
+            }
+            payload.put(configuredTag.getTagName(), item.getValue());
         }
         if (payload.isEmpty())
         {
@@ -117,7 +138,12 @@ public class NdtOrthancService
 
     public boolean isEditableTag(String tagName)
     {
-        return StringUtils.isNotEmpty(tagName) && EDITABLE_TAG_WHITELIST.contains(tagName);
+        if (StringUtils.isEmpty(tagName))
+        {
+            return false;
+        }
+        privateTagService.checkEditableTagName(tagName);
+        return true;
     }
 
     private List<NdtDicomTagItem> convertTags(JSONObject tags)
@@ -131,12 +157,46 @@ public class NdtOrthancService
         {
             NdtDicomTagItem item = new NdtDicomTagItem();
             item.setTagName(entry.getKey());
-            item.setValue(entry.getValue() == null ? null : String.valueOf(entry.getValue()));
+            item.setValue(extractTagValue(entry.getValue()));
             item.setOriginalValue(item.getValue());
-            item.setEditable(Boolean.TRUE);
+            applyPrivateTagConfig(item);
             items.add(item);
         }
         return items;
+    }
+
+    private void applyPrivateTagConfig(NdtDicomTagItem item)
+    {
+        for (NdtDicomPrivateTag tag : privateTagService.selectEnabledNdtDicomPrivateTagList())
+        {
+            if (tag.getTagName().equals(item.getTagName()) || (StringUtils.isNotEmpty(tag.getTagCode()) && tag.getTagCode().equals(item.getTagName())))
+            {
+                item.setTagLabel(tag.getTagLabel());
+                item.setTagName(tag.getTagName());
+                item.setVr(StringUtils.isEmpty(item.getVr()) ? tag.getVr() : item.getVr());
+                item.setEditable(Boolean.TRUE);
+                item.setConfigured(Boolean.TRUE);
+                return;
+            }
+        }
+        item.setTagLabel(item.getTagName());
+        item.setEditable(Boolean.FALSE);
+        item.setConfigured(Boolean.FALSE);
+    }
+
+    private String extractTagValue(Object rawValue)
+    {
+        if (rawValue instanceof JSONObject tag)
+        {
+            Object value = tag.get("Value");
+            return value == null ? null : String.valueOf(value);
+        }
+        return rawValue == null ? null : String.valueOf(rawValue);
+    }
+
+    private boolean isNdtPrivateTag(NdtDicomPrivateTag tag)
+    {
+        return tag != null && StringUtils.isNotEmpty(tag.getTagCode()) && tag.getTagCode().startsWith("0011,10");
     }
 
     private NdtOrthancHierarchyNode buildStudyNode(NdtDicomInstance instance, String studyKey)

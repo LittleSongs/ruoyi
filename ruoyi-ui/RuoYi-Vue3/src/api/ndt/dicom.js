@@ -12,6 +12,10 @@ export function getDicomTags(id) {
   return request({ url: '/ndt/dicom/' + id + '/tags', method: 'get' })
 }
 
+export function getDicomTagOptions(id) {
+  return request({ url: '/ndt/dicom/' + id + '/tag-options', method: 'get' })
+}
+
 export function addDicomTag(id, data) {
   return request({ url: '/ndt/dicom/' + id + '/tags', method: 'post', data })
 }

@@ -199,6 +199,7 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
         result.setOrthancStudyId(updated.getOrthancStudyId());
         result.setOrthancSeriesId(updated.getOrthancSeriesId());
         result.setOrthancInstanceId(updated.getOrthancInstanceId());
+        result.setFileSha256(newFileSha256);
         result.setOhifViewerUrl(properties.buildViewerUrl(updated.getStudyInstanceUid()));
         return result;
     }
