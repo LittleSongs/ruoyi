@@ -37,7 +37,7 @@ public class NdtOrthancController extends BaseController
     }
 
     @PreAuthorize("@ss.hasPermi('ndt:orthanc:edit')")
-    @Log(title = "Orthanc±êÇ©ÐÞ¸Ä", businessType = BusinessType.UPDATE)
+    @Log(title = "Orthancæ ‡ç­¾ä¿®æ”¹", businessType = BusinessType.UPDATE)
     @PutMapping("/{dicomInstanceId}/tags")
     public AjaxResult updateTags(@PathVariable Long dicomInstanceId, @RequestBody List<NdtDicomTagItem> items)
     {

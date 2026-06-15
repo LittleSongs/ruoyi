@@ -24,6 +24,6 @@ public class NdtOhifController extends BaseController
     public AjaxResult config()
     {
         NdtProperties.Ohif ohif = ndtProperties.getOhif();
-        return AjaxResult.success("²Ù×÷³É¹¦", ohif);
+        return AjaxResult.success("æŸ¥è¯¢æˆåŠŸ", ohif);
     }
 }

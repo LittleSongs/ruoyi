@@ -1,5 +1,8 @@
 package com.ruoyi.ndt.dicom.domain;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * DICOM upload result.
  */
@@ -15,6 +18,13 @@ public class NdtDicomUploadResult
     private String orthancInstanceId;
     private String fileSha256;
     private String ohifViewerUrl;
+    private Long validationRecordId;
+    private String fileName;
+    private String sopClassUid;
+    private String officialStatus;
+    private String customStatus;
+    private String finalStatus;
+    private List<String> errors = new ArrayList<>();
 
     public Long getTaskId() { return taskId; }
     public void setTaskId(Long taskId) { this.taskId = taskId; }
@@ -36,4 +46,18 @@ public class NdtDicomUploadResult
     public void setFileSha256(String fileSha256) { this.fileSha256 = fileSha256; }
     public String getOhifViewerUrl() { return ohifViewerUrl; }
     public void setOhifViewerUrl(String ohifViewerUrl) { this.ohifViewerUrl = ohifViewerUrl; }
+    public Long getValidationRecordId() { return validationRecordId; }
+    public void setValidationRecordId(Long validationRecordId) { this.validationRecordId = validationRecordId; }
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+    public String getSopClassUid() { return sopClassUid; }
+    public void setSopClassUid(String sopClassUid) { this.sopClassUid = sopClassUid; }
+    public String getOfficialStatus() { return officialStatus; }
+    public void setOfficialStatus(String officialStatus) { this.officialStatus = officialStatus; }
+    public String getCustomStatus() { return customStatus; }
+    public void setCustomStatus(String customStatus) { this.customStatus = customStatus; }
+    public String getFinalStatus() { return finalStatus; }
+    public void setFinalStatus(String finalStatus) { this.finalStatus = finalStatus; }
+    public List<String> getErrors() { return errors; }
+    public void setErrors(List<String> errors) { this.errors = errors; }
 }

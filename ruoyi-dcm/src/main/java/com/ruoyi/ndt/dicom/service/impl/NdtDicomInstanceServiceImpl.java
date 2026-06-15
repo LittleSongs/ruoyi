@@ -1,6 +1,8 @@
 package com.ruoyi.ndt.dicom.service.impl;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.alibaba.fastjson2.JSONObject;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.dcm.validation.DcmUploadValidationResult;
+import com.ruoyi.dcm.validation.DcmUploadValidationService;
 import com.ruoyi.ndt.common.NdtConstants;
 import com.ruoyi.ndt.config.NdtProperties;
 import com.ruoyi.ndt.dicom.domain.NdtDicomInstance;
@@ -52,6 +56,9 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
 
     @Autowired
     private NdtProperties properties;
+
+    @Autowired
+    private DcmUploadValidationService validationService;
 
     @Override
     public List<NdtDicomInstance> selectNdtDicomInstanceList(NdtDicomInstance instance)
@@ -103,6 +110,13 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
 
         byte[] content = readFile(file);
         String fileSha256 = integrityService.calculateSha256(content);
+        Path tempPath = saveTempDicom(content);
+        DcmUploadValidationResult validationResult = validationService.validate(tempPath, file, username);
+        if (!"PASS".equals(validationResult.getFinalStatus()))
+        {
+            NdtDicomUploadResult result = validationFailureResult(taskId, fileSha256, validationResult);
+            return result;
+        }
         JSONObject uploadResponse = orthancService.uploadInstance(content);
         String orthancInstanceId = requireValue(uploadResponse.getString("ID"), "Orthanc 上传响应缺少 Instance ID");
         JSONObject orthancInstance = orthancService.getInstance(orthancInstanceId);
@@ -121,6 +135,7 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
 
         NdtDicomInstance instance = upsertDicomInstance(task, file, username, userId, orthancStudyId,
                 orthancSeriesId, orthancInstanceId, tags, studyUid, seriesUid, sopUid);
+        validationService.markOrthancUploaded(validationResult.getRecordId(), orthancInstanceId);
         upsertIntegrityRecord(instance, fileSha256, userId);
         taskMapper.updateNdtInspectionTaskStudy(taskId, studyUid, orthancStudyId,
                 NdtConstants.TASK_STATUS_UPLOADED, username);
@@ -136,6 +151,12 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
         result.setOrthancInstanceId(orthancInstanceId);
         result.setFileSha256(fileSha256);
         result.setOhifViewerUrl(properties.buildViewerUrl(studyUid));
+        result.setValidationRecordId(validationResult.getRecordId());
+        result.setFileName(validationResult.getFileName());
+        result.setSopClassUid(validationResult.getSopClassUid());
+        result.setOfficialStatus(validationResult.getOfficialStatus());
+        result.setCustomStatus(validationResult.getCustomStatus());
+        result.setFinalStatus(validationResult.getFinalStatus());
         return result;
     }
 
@@ -248,6 +269,39 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
         {
             throw new ServiceException("读取上传的 DICOM 文件失败");
         }
+    }
+
+    private Path saveTempDicom(byte[] content)
+    {
+        try
+        {
+            Path tempPath = Files.createTempFile("ruoyi-dcm-", ".dcm");
+            Files.write(tempPath, content);
+            return tempPath;
+        }
+        catch (IOException e)
+        {
+            throw new ServiceException("保存DICOM临时文件失败：" + e.getMessage());
+        }
+    }
+
+    private NdtDicomUploadResult validationFailureResult(Long taskId, String fileSha256,
+            DcmUploadValidationResult validationResult)
+    {
+        NdtDicomUploadResult result = new NdtDicomUploadResult();
+        result.setTaskId(taskId);
+        result.setValidationRecordId(validationResult.getRecordId());
+        result.setFileName(validationResult.getFileName());
+        result.setFileSha256(fileSha256);
+        result.setSopClassUid(validationResult.getSopClassUid());
+        result.setStudyInstanceUid(validationResult.getStudyInstanceUid());
+        result.setSeriesInstanceUid(validationResult.getSeriesInstanceUid());
+        result.setSopInstanceUid(validationResult.getSopInstanceUid());
+        result.setOfficialStatus(validationResult.getOfficialStatus());
+        result.setCustomStatus(validationResult.getCustomStatus());
+        result.setFinalStatus(validationResult.getFinalStatus());
+        result.setErrors(validationResult.getErrors());
+        return result;
     }
 
     private NdtDicomInstance upsertDicomInstance(NdtInspectionTask task, MultipartFile file, String username,
