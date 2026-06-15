@@ -1,5 +1,8 @@
 package com.ruoyi.dcm.service.impl;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +22,8 @@ import com.ruoyi.dcm.mapper.DcmSeriesMapper;
 import com.ruoyi.dcm.mapper.DcmStudyMapper;
 import com.ruoyi.dcm.service.DcmOrthancService;
 import com.ruoyi.dcm.service.IDcmUploadService;
+import com.ruoyi.dcm.validation.DcmUploadValidationResult;
+import com.ruoyi.dcm.validation.DcmUploadValidationService;
 
 /**
  * Uploads a DICOM object and synchronizes its entire Orthanc Study index.
@@ -41,6 +46,9 @@ public class DcmUploadServiceImpl implements IDcmUploadService
     @Autowired
     private DcmInstanceMapper instanceMapper;
 
+    @Autowired
+    private DcmUploadValidationService validationService;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DcmUploadResult uploadAndSync(MultipartFile file, Long uploadUserId, String uploadUserName)
@@ -48,6 +56,13 @@ public class DcmUploadServiceImpl implements IDcmUploadService
         if (file == null || file.isEmpty())
         {
             throw new ServiceException("请选择需要上传的 DCM 文件");
+        }
+
+        Path tempPath = saveTempDicom(file);
+        DcmUploadValidationResult validationResult = validationService.validate(tempPath, file, uploadUserName);
+        if (!DcmConstants.VALIDATION_STATUS_PASS.equals(validationResult.getFinalStatus()))
+        {
+            return validationFailureResult(validationResult);
         }
 
         JSONObject uploadResponse = orthancService.uploadInstance(file);
@@ -88,6 +103,43 @@ public class DcmUploadServiceImpl implements IDcmUploadService
         result.setPatientName(study.getPatientName());
         result.setStudyDescription(study.getStudyDescription());
         result.setOhifViewerUrl(properties.buildViewerUrl(studyUid));
+        result.setValidationRecordId(validationResult.getRecordId());
+        result.setFileName(validationResult.getFileName());
+        result.setSopClassUid(validationResult.getSopClassUid());
+        result.setOfficialStatus(validationResult.getOfficialStatus());
+        result.setCustomStatus(validationResult.getCustomStatus());
+        result.setFinalStatus(validationResult.getFinalStatus());
+        validationService.markOrthancUploaded(validationResult.getRecordId(), uploadedInstanceId);
+        return result;
+    }
+
+    private Path saveTempDicom(MultipartFile file)
+    {
+        try
+        {
+            Path tempPath = Files.createTempFile("ruoyi-dcm-", ".dcm");
+            Files.write(tempPath, file.getBytes());
+            return tempPath;
+        }
+        catch (IOException e)
+        {
+            throw new ServiceException("保存DICOM临时文件失败：" + e.getMessage());
+        }
+    }
+
+    private DcmUploadResult validationFailureResult(DcmUploadValidationResult validationResult)
+    {
+        DcmUploadResult result = new DcmUploadResult();
+        result.setValidationRecordId(validationResult.getRecordId());
+        result.setFileName(validationResult.getFileName());
+        result.setSopClassUid(validationResult.getSopClassUid());
+        result.setStudyInstanceUid(validationResult.getStudyInstanceUid());
+        result.setSeriesInstanceUid(validationResult.getSeriesInstanceUid());
+        result.setSopInstanceUid(validationResult.getSopInstanceUid());
+        result.setOfficialStatus(validationResult.getOfficialStatus());
+        result.setCustomStatus(validationResult.getCustomStatus());
+        result.setFinalStatus(validationResult.getFinalStatus());
+        result.setErrors(validationResult.getErrors());
         return result;
     }
 

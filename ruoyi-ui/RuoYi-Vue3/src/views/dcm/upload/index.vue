@@ -96,7 +96,11 @@ function submitUpload() {
   uploading.value = true
   uploadDcm(formData).then(response => {
     result.value = response.data
-    proxy.$modal.msgSuccess("DCM 上传并归档成功")
+    if (result.value?.finalStatus === "FAIL") {
+      proxy.$modal.msgError((result.value.errors || []).join("；") || "DICOM校验失败，文件未上传到Orthanc")
+      return
+    }
+    proxy.$modal.msgSuccess("DCM 上传并归档成功!")
   }).finally(() => {
     uploading.value = false
   })

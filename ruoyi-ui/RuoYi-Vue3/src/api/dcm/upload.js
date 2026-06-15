@@ -10,6 +10,6 @@ export function uploadDcm(data) {
       'Content-Type': 'multipart/form-data',
       repeatSubmit: false
     },
-    timeout: 60000
+    timeout: 600000
   })
 }

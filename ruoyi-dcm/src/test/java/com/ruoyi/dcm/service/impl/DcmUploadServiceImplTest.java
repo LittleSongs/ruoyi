@@ -27,6 +27,8 @@ import com.ruoyi.dcm.mapper.DcmInstanceMapper;
 import com.ruoyi.dcm.mapper.DcmSeriesMapper;
 import com.ruoyi.dcm.mapper.DcmStudyMapper;
 import com.ruoyi.dcm.service.DcmOrthancService;
+import com.ruoyi.dcm.validation.DcmUploadValidationResult;
+import com.ruoyi.dcm.validation.DcmUploadValidationService;
 
 class DcmUploadServiceImplTest
 {
@@ -41,6 +43,9 @@ class DcmUploadServiceImplTest
 
     @Mock
     private DcmInstanceMapper instanceMapper;
+
+    @Mock
+    private DcmUploadValidationService validationService;
 
     private DcmUploadServiceImpl service;
 
@@ -58,7 +63,9 @@ class DcmUploadServiceImplTest
         ReflectionTestUtils.setField(service, "studyMapper", studyMapper);
         ReflectionTestUtils.setField(service, "seriesMapper", seriesMapper);
         ReflectionTestUtils.setField(service, "instanceMapper", instanceMapper);
+        ReflectionTestUtils.setField(service, "validationService", validationService);
         file = new MockMultipartFile("file", "test.dcm", "application/dicom", new byte[] { 1 });
+        when(validationService.validate(any(), any(), any())).thenReturn(validationPass());
     }
 
     @Test
@@ -128,6 +135,24 @@ class DcmUploadServiceImplTest
         verify(studyMapper, never()).insertDcmStudy(any());
     }
 
+    @Test
+    void validationFailureDoesNotUploadToOrthanc()
+    {
+        DcmUploadValidationResult validation = new DcmUploadValidationResult();
+        validation.setRecordId(9L);
+        validation.setFileName("bad.dcm");
+        validation.setFinalStatus("FAIL");
+        validation.setOfficialStatus("PASS");
+        validation.setCustomStatus("FAIL");
+        validation.getErrors().add("缺少必备Tag：(0011,1010) NDTClientName");
+        when(validationService.validate(any(), any(), any())).thenReturn(validation);
+
+        DcmUploadResult result = service.uploadAndSync(file, 1L, "admin");
+
+        assertEquals("FAIL", result.getFinalStatus());
+        verify(orthancService, never()).uploadInstance(any());
+    }
+
     private void arrangeHierarchy(boolean includeSecondSeries)
     {
         String studyJson = includeSecondSeries ? "{\"Series\":[\"s-1\",\"s-2\"]}" : "{\"Series\":[\"s-1\"]}";
@@ -152,5 +177,17 @@ class DcmUploadServiceImplTest
     private JSONObject json(String value)
     {
         return JSONObject.parseObject(value);
+    }
+
+    private DcmUploadValidationResult validationPass()
+    {
+        DcmUploadValidationResult result = new DcmUploadValidationResult();
+        result.setRecordId(1L);
+        result.setFileName("test.dcm");
+        result.setSopClassUid("1.2.3");
+        result.setOfficialStatus("PASS");
+        result.setCustomStatus("PASS");
+        result.setFinalStatus("PASS");
+        return result;
     }
 }

@@ -1,5 +1,8 @@
 package com.ruoyi.dcm.domain;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Upload and index synchronization response.
  */
@@ -13,6 +16,13 @@ public class DcmUploadResult
     private String patientName;
     private String studyDescription;
     private String ohifViewerUrl;
+    private Long validationRecordId;
+    private String fileName;
+    private String sopClassUid;
+    private String officialStatus;
+    private String customStatus;
+    private String finalStatus;
+    private List<String> errors = new ArrayList<>();
 
     public Long getStudyId() { return studyId; }
     public void setStudyId(Long studyId) { this.studyId = studyId; }
@@ -30,4 +40,18 @@ public class DcmUploadResult
     public void setStudyDescription(String studyDescription) { this.studyDescription = studyDescription; }
     public String getOhifViewerUrl() { return ohifViewerUrl; }
     public void setOhifViewerUrl(String ohifViewerUrl) { this.ohifViewerUrl = ohifViewerUrl; }
+    public Long getValidationRecordId() { return validationRecordId; }
+    public void setValidationRecordId(Long validationRecordId) { this.validationRecordId = validationRecordId; }
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+    public String getSopClassUid() { return sopClassUid; }
+    public void setSopClassUid(String sopClassUid) { this.sopClassUid = sopClassUid; }
+    public String getOfficialStatus() { return officialStatus; }
+    public void setOfficialStatus(String officialStatus) { this.officialStatus = officialStatus; }
+    public String getCustomStatus() { return customStatus; }
+    public void setCustomStatus(String customStatus) { this.customStatus = customStatus; }
+    public String getFinalStatus() { return finalStatus; }
+    public void setFinalStatus(String finalStatus) { this.finalStatus = finalStatus; }
+    public List<String> getErrors() { return errors; }
+    public void setErrors(List<String> errors) { this.errors = errors; }
 }

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.dcm.mapper.DcmValidationRecordMapper">
+    <insert id="insertDcmValidationRecord" parameterType="DcmValidationRecord" useGeneratedKeys="true" keyProperty="recordId">
+        insert into dcm_validation_record
+        (batch_id, file_name, file_size, temp_path, sop_class_uid, media_storage_sop_class_uid,
+         study_instance_uid, series_instance_uid, sop_instance_uid, modality, official_status,
+         custom_status, final_status, error_count, warning_count, official_result_json,
+         custom_result_json, orthanc_instance_id, create_by, create_time)
+        values
+        (#{batchId}, #{fileName}, #{fileSize}, #{tempPath}, #{sopClassUid}, #{mediaStorageSopClassUid},
+         #{studyInstanceUid}, #{seriesInstanceUid}, #{sopInstanceUid}, #{modality}, #{officialStatus},
+         #{customStatus}, #{finalStatus}, #{errorCount}, #{warningCount}, #{officialResultJson},
+         #{customResultJson}, #{orthancInstanceId}, #{createBy}, sysdate())
+    </insert>
+
+    <update id="updateDcmValidationRecordOrthancInstanceId" parameterType="DcmValidationRecord">
+        update dcm_validation_record
+           set orthanc_instance_id = #{orthancInstanceId}
+         where record_id = #{recordId}
+    </update>
+</mapper>

@@ -227,7 +227,20 @@ function submitUpload() {
   }
   uploading.value = true
   uploadDicom(uploadTaskId.value, uploadFile.value)
-    .then(() => {
+    .then((res) => {
+      const data = res.data || {}
+      if (data.finalStatus === 'FAIL') {
+        const errorText = (data.errors || []).join('；') || 'DICOM校验失败，文件未上传到Orthanc'
+        proxy.$alert(errorText, '校验失败', {
+          type: 'error',
+          confirmButtonText: '关闭',
+          showClose: true,
+          closeOnClickModal: false,
+          closeOnPressEscape: false,
+          customClass: 'dicom-error-message-box'
+        })
+        return
+      }
       proxy.$modal.msgSuccess("上传成功")
       uploadOpen.value = false
       getList()
@@ -256,5 +269,22 @@ onMounted(() => {
 
 :deep(.el-upload) {
   width: 100%;
+}
+
+:global(.dicom-error-message-box) {
+  width: 760px;
+  max-width: calc(100vw - 32px);
+}
+
+:global(.dicom-error-message-box .el-message-box__content) {
+  max-height: 60vh;
+  overflow: auto;
+}
+
+:global(.dicom-error-message-box .el-message-box__message) {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+  text-align: left;
 }
 </style>

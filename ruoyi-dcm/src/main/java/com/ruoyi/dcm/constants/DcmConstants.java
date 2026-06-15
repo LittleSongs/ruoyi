@@ -19,6 +19,8 @@ public class DcmConstants
 
     public static final String EVALUATION_STATUS_SUBMITTED = "SUBMITTED";
 
+    public static final String VALIDATION_STATUS_PASS = "PASS";
+
     private DcmConstants()
     {
     }

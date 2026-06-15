@@ -16,6 +16,8 @@ public class DcmProperties
 
     private Ohif ohif = new Ohif();
 
+    private Validation validation = new Validation();
+
     public Orthanc getOrthanc()
     {
         return orthanc;
@@ -34,6 +36,16 @@ public class DcmProperties
     public void setOhif(Ohif ohif)
     {
         this.ohif = ohif;
+    }
+
+    public Validation getValidation()
+    {
+        return validation;
+    }
+
+    public void setValidation(Validation validation)
+    {
+        this.validation = validation;
     }
 
     public String buildViewerUrl(String studyInstanceUid)
@@ -95,6 +107,43 @@ public class DcmProperties
         public void setViewerUrl(String viewerUrl)
         {
             this.viewerUrl = viewerUrl;
+        }
+    }
+
+    public static class Validation
+    {
+        private boolean officialEnabled = true;
+        private String officialCommand = "validate_iods";
+        private int officialTimeoutSeconds = 60;
+
+        public boolean isOfficialEnabled()
+        {
+            return officialEnabled;
+        }
+
+        public void setOfficialEnabled(boolean officialEnabled)
+        {
+            this.officialEnabled = officialEnabled;
+        }
+
+        public String getOfficialCommand()
+        {
+            return officialCommand;
+        }
+
+        public void setOfficialCommand(String officialCommand)
+        {
+            this.officialCommand = officialCommand;
+        }
+
+        public int getOfficialTimeoutSeconds()
+        {
+            return officialTimeoutSeconds;
+        }
+
+        public void setOfficialTimeoutSeconds(int officialTimeoutSeconds)
+        {
+            this.officialTimeoutSeconds = officialTimeoutSeconds;
         }
     }
 }

@@ -330,29 +330,33 @@ insert into sys_menu (menu_name, parent_id, order_num, path, component, query, r
 select '检测人员档案', @ndt_parent_id, 3, 'inspector', 'ndt/inspector/index', '', '', 1, 0, 'C', '0', '0', 'ndt:inspector:list', 'peoples', 'admin', sysdate(), 'NDT检测人员档案'
 where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'inspector');
 insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-select 'UID规则配置', @ndt_parent_id, 4, 'uidRule', 'ndt/uidRule/index', '', '', 1, 0, 'C', '0', '0', 'ndt:uidRule:list', 'system', 'admin', sysdate(), 'NDT UID规则配置'
+select '客户公司管理', @ndt_parent_id, 4, 'company', 'ndt/company/index', '', '', 1, 0, 'C', '0', '0', 'ndt:company:list', 'people', 'admin', sysdate(), 'NDT客户公司信息静态展示'
+where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'company');
+insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
+select 'UID规则配置', @ndt_parent_id, 5, 'uidRule', 'ndt/uidRule/index', '', '', 1, 0, 'C', '0', '0', 'ndt:uidRule:list', 'system', 'admin', sysdate(), 'NDT UID规则配置'
 where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'uidRule');
 insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-select 'DICOM私有标签', @ndt_parent_id, 5, 'dicomPrivateTag', 'ndt/dicomPrivateTag/index', '', '', 1, 0, 'C', '0', '0', 'ndt:dicomPrivateTag:list', 'edit', 'admin', sysdate(), 'NDT允许编辑的DICOM标签配置'
+select 'DICOM私有标签', @ndt_parent_id, 6, 'dicomPrivateTag', 'ndt/dicomPrivateTag/index', '', '', 1, 0, 'C', '0', '0', 'ndt:dicomPrivateTag:list', 'edit', 'admin', sysdate(), 'NDT允许编辑的DICOM标签配置'
 where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'dicomPrivateTag');
 insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-select 'DICOM完整性校验', @ndt_parent_id, 6, 'integrity', 'ndt/integrity/index', '', '', 1, 0, 'C', '0', '0', 'ndt:integrity:list', 'validCode', 'admin', sysdate(), 'NDT DICOM完整性校验'
+select 'DICOM完整性校验', @ndt_parent_id, 7, 'integrity', 'ndt/integrity/index', '', '', 1, 0, 'C', '0', '0', 'ndt:integrity:list', 'validCode', 'admin', sysdate(), 'NDT DICOM完整性校验'
 where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'integrity');
 insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-select '评定结果管理', @ndt_parent_id, 7, 'evaluation', 'ndt/evaluation/index', '', '', 1, 0, 'C', '0', '0', 'ndt:evaluation:list', 'form', 'admin', sysdate(), 'NDT评定结果管理'
+select '评定结果管理', @ndt_parent_id, 8, 'evaluation', 'ndt/evaluation/index', '', '', 1, 0, 'C', '0', '0', 'ndt:evaluation:list', 'form', 'admin', sysdate(), 'NDT评定结果管理'
 where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'evaluation');
 insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-select 'OHIF入口配置', @ndt_parent_id, 8, 'ohif', 'ndt/ohif/index', '', '', 1, 0, 'C', '0', '0', 'ndt:ohif:list', 'link', 'admin', sysdate(), 'NDT OHIF入口配置'
+select 'OHIF入口配置', @ndt_parent_id, 9, 'ohif', 'ndt/ohif/index', '', '', 1, 0, 'C', '0', '0', 'ndt:ohif:list', 'link', 'admin', sysdate(), 'NDT OHIF入口配置'
 where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'ohif');
 insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-select 'Orthanc归档管理', @ndt_parent_id, 9, 'orthanc', 'ndt/orthanc/index', '', '', 1, 0, 'C', '0', '0', 'ndt:orthanc:list', 'tree', 'admin', sysdate(), 'NDT Orthanc归档管理'
+select 'Orthanc归档管理', @ndt_parent_id, 10, 'orthanc', 'ndt/orthanc/index', '', '', 1, 0, 'C', '0', '0', 'ndt:orthanc:list', 'tree', 'admin', sysdate(), 'NDT Orthanc归档管理'
 where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'orthanc');
 insert into sys_menu (menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, remark)
-select '报告管理', @ndt_parent_id, 10, 'report', 'ndt/report/index', '', '', 1, 0, 'C', '0', '0', 'ndt:report:list', 'document', 'admin', sysdate(), 'NDT报告管理'
+select '报告管理', @ndt_parent_id, 11, 'report', 'ndt/report/index', '', '', 1, 0, 'C', '0', '0', 'ndt:report:list', 'document', 'admin', sysdate(), 'NDT报告管理'
 where not exists (select 1 from sys_menu where parent_id = @ndt_parent_id and path = 'report');
 set @ndt_task_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'task' order by menu_id limit 1);
 set @ndt_dicom_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'dicom' order by menu_id limit 1);
 set @ndt_inspector_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'inspector' order by menu_id limit 1);
+set @ndt_company_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'company' order by menu_id limit 1);
 set @ndt_uid_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'uidRule' order by menu_id limit 1);
 set @ndt_private_tag_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'dicomPrivateTag' order by menu_id limit 1);
 set @ndt_integrity_id = (select menu_id from sys_menu where parent_id = @ndt_parent_id and path = 'integrity' order by menu_id limit 1);
@@ -463,11 +467,12 @@ set @ndt_customer_role_id = (select role_id from sys_role where role_key = 'ndt_
 
 insert into sys_role_menu (role_id, menu_id)
 select @ndt_company_admin_role_id, m.menu_id
-  from sys_menu m
+ from sys_menu m
  where @ndt_company_admin_role_id is not null
-   and (m.menu_id in (@ndt_parent_id, @ndt_task_id, @ndt_dicom_id, @ndt_inspector_id, @ndt_private_tag_id, @ndt_integrity_id, @ndt_evaluation_id)
+   and (m.menu_id in (@ndt_parent_id, @ndt_task_id, @ndt_dicom_id, @ndt_inspector_id, @ndt_company_id, @ndt_private_tag_id, @ndt_integrity_id, @ndt_evaluation_id)
         or m.perms in ('ndt:task:query','ndt:task:add','ndt:task:edit','ndt:task:remove','ndt:task:assign','ndt:task:ohif',
                        'ndt:dicom:upload','ndt:dicom:download','ndt:dicom:tag:list','ndt:dicom:tag:add','ndt:dicom:tag:edit','ndt:dicom:tag:remove',
+                       'ndt:company:list',
                        'ndt:inspector:add','ndt:inspector:edit','ndt:inspector:remove',
                        'ndt:dicomPrivateTag:query','ndt:dicomPrivateTag:add','ndt:dicomPrivateTag:edit','ndt:dicomPrivateTag:remove',
                        'ndt:integrity:verify','ndt:evaluation:query'))

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.dcm.mapper.DcmValidationRuleMapper">
+    <resultMap type="DcmValidationRule" id="DcmValidationRuleResult">
+        <id property="ruleId" column="rule_id"/>
+        <result property="ruleName" column="rule_name"/>
+        <result property="sopClassUid" column="sop_class_uid"/>
+        <result property="sopName" column="sop_name"/>
+        <result property="modality" column="modality"/>
+        <result property="ruleType" column="rule_type"/>
+        <result property="tagCode" column="tag_code"/>
+        <result property="tagDisplay" column="tag_display"/>
+        <result property="tagName" column="tag_name"/>
+        <result property="vr" column="vr"/>
+        <result property="privateCreator" column="private_creator"/>
+        <result property="allowBlank" column="allow_blank"/>
+        <result property="severity" column="severity"/>
+        <result property="enabled" column="enabled"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="failMessage" column="fail_message"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectDcmValidationRuleVo">
+        select rule_id, rule_name, sop_class_uid, sop_name, modality, rule_type,
+               tag_code, tag_display, tag_name, vr, private_creator, allow_blank,
+               severity, enabled, sort_order, fail_message, remark, create_by,
+               create_time, update_by, update_time
+          from dcm_validation_rule
+    </sql>
+
+    <select id="selectDcmValidationRuleList" parameterType="DcmValidationRule" resultMap="DcmValidationRuleResult">
+        <include refid="selectDcmValidationRuleVo"/>
+        <where>
+            <if test="ruleName != null and ruleName != ''">and rule_name like concat('%', #{ruleName}, '%')</if>
+            <if test="sopClassUid != null and sopClassUid != ''">and sop_class_uid like concat('%', #{sopClassUid}, '%')</if>
+            <if test="ruleType != null">and rule_type = #{ruleType}</if>
+            <if test="enabled != null and enabled != ''">and enabled = #{enabled}</if>
+        </where>
+        order by sort_order asc, rule_id asc
+    </select>
+
+    <select id="selectEnabledTypeOneRules" parameterType="String" resultMap="DcmValidationRuleResult">
+        <include refid="selectDcmValidationRuleVo"/>
+        where enabled = 'Y'
+          and rule_type = 1
+          and (sop_class_uid = #{sopClassUid} or sop_class_uid = '*')
+        order by sort_order asc, rule_id asc
+    </select>
+
+    <select id="selectDcmValidationRuleById" parameterType="Long" resultMap="DcmValidationRuleResult">
+        <include refid="selectDcmValidationRuleVo"/>
+        where rule_id = #{ruleId}
+    </select>
+
+    <insert id="insertDcmValidationRule" parameterType="DcmValidationRule" useGeneratedKeys="true" keyProperty="ruleId">
+        insert into dcm_validation_rule
+        (rule_name, sop_class_uid, sop_name, modality, rule_type, tag_code, tag_display,
+         tag_name, vr, private_creator, allow_blank, severity, enabled, sort_order,
+         fail_message, remark, create_by, create_time, update_by, update_time)
+        values
+        (#{ruleName}, #{sopClassUid}, #{sopName}, #{modality}, #{ruleType}, #{tagCode}, #{tagDisplay},
+         #{tagName}, #{vr}, #{privateCreator}, #{allowBlank}, #{severity}, #{enabled}, #{sortOrder},
+         #{failMessage}, #{remark}, #{createBy}, sysdate(), #{updateBy}, sysdate())
+    </insert>
+
+    <update id="updateDcmValidationRule" parameterType="DcmValidationRule">
+        update dcm_validation_rule
+           set rule_name = #{ruleName},
+               sop_class_uid = #{sopClassUid},
+               sop_name = #{sopName},
+               modality = #{modality},
+               rule_type = #{ruleType},
+               tag_code = #{tagCode},
+               tag_display = #{tagDisplay},
+               tag_name = #{tagName},
+               vr = #{vr},
+               private_creator = #{privateCreator},
+               allow_blank = #{allowBlank},
+               severity = #{severity},
+               enabled = #{enabled},
+               sort_order = #{sortOrder},
+               fail_message = #{failMessage},
+               remark = #{remark},
+               update_by = #{updateBy},
+               update_time = sysdate()
+         where rule_id = #{ruleId}
+    </update>
+
+    <delete id="deleteDcmValidationRuleByIds" parameterType="Long">
+        delete from dcm_validation_rule
+        where rule_id in
+        <foreach collection="array" item="ruleId" open="(" separator="," close=")">#{ruleId}</foreach>
+    </delete>
+</mapper>

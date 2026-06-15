@@ -154,6 +154,10 @@ dcm:
     password:
   ohif:
     viewer-url: http://localhost:3000/viewer
+  validation:
+    official-enabled: true
+    official-command: validate_iods
+    official-timeout-seconds: 60
 
 # 无损检测 DICOM 管理配置
 # 这里要区分viewer-url: http://localhost:3000/industrial-viewer 或 http://localhost:3000/viewer，因为不同用户有不同过的权限，有些能评定，有些能创建 SR，有些只能查看，这个后期再处理，目前就都按照industrial-viewer的逻辑走
