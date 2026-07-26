@@ -29,6 +29,8 @@ public class NdtDicomInstance extends BaseEntity
     private String instanceNumber;
     private String seriesDescription;
     private String sopClassUid;
+    private Long dicomSeriesId;
+    private String objectType;
     private String isOriginal;
     private String fileName;
     private Long fileSize;
@@ -75,6 +77,10 @@ public class NdtDicomInstance extends BaseEntity
     public void setSeriesDescription(String seriesDescription) { this.seriesDescription = seriesDescription; }
     public String getSopClassUid() { return sopClassUid; }
     public void setSopClassUid(String sopClassUid) { this.sopClassUid = sopClassUid; }
+    public Long getDicomSeriesId() { return dicomSeriesId; }
+    public void setDicomSeriesId(Long dicomSeriesId) { this.dicomSeriesId = dicomSeriesId; }
+    public String getObjectType() { return objectType; }
+    public void setObjectType(String objectType) { this.objectType = objectType; }
     public String getIsOriginal() { return isOriginal; }
     public void setIsOriginal(String isOriginal) { this.isOriginal = isOriginal; }
     public String getFileName() { return fileName; }

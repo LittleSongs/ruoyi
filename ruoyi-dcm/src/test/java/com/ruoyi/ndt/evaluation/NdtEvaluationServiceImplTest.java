@@ -24,6 +24,7 @@ import com.ruoyi.ndt.evaluation.mapper.NdtEvaluationMapper;
 import com.ruoyi.ndt.evaluation.service.impl.NdtEvaluationServiceImpl;
 import com.ruoyi.ndt.integrity.service.INdtIntegrityService;
 import com.ruoyi.ndt.orthanc.OrthancService;
+import com.ruoyi.ndt.organization.service.NdtDicomOrganizationService;
 import com.ruoyi.ndt.relation.domain.NdtDicomObjectRelation;
 import com.ruoyi.ndt.relation.mapper.NdtDicomObjectRelationMapper;
 import com.ruoyi.ndt.task.domain.NdtInspectionTask;
@@ -49,6 +50,9 @@ class NdtEvaluationServiceImplTest
     @Mock
     private INdtIntegrityService integrityService;
 
+    @Mock
+    private NdtDicomOrganizationService organizationService;
+
     private NdtEvaluationServiceImpl service;
 
     @BeforeEach
@@ -62,6 +66,7 @@ class NdtEvaluationServiceImplTest
         ReflectionTestUtils.setField(service, "dicomInstanceMapper", dicomInstanceMapper);
         ReflectionTestUtils.setField(service, "objectRelationMapper", relationMapper);
         ReflectionTestUtils.setField(service, "integrityService", integrityService);
+        ReflectionTestUtils.setField(service, "organizationService", organizationService);
     }
 
     @Test
@@ -106,6 +111,8 @@ class NdtEvaluationServiceImplTest
         verify(evaluationMapper, times(2)).insertNdtEvaluation(any());
         verify(dicomInstanceMapper).insertNdtDicomInstance(any());
         verify(relationMapper, times(2)).insertNdtDicomObjectRelation(relationCaptor.capture());
+        verify(organizationService).registerRelated(1001L, 31L,
+                List.of("source-sop-uid", "source-sop-uid"), NdtConstants.OBJECT_TYPE_SR);
         List<NdtDicomObjectRelation> relations = relationCaptor.getAllValues();
         assertEquals(11L, relations.get(0).getEvaluationId());
         assertEquals(12L, relations.get(1).getEvaluationId());

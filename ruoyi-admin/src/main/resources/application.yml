@@ -169,5 +169,6 @@ ndt:
   ohif:
     viewer-url: http://localhost:3000/industrial-viewer
   security:
+    allow-anonymous-viewer-api: ${NDT_ALLOW_ANONYMOUS_VIEWER_API:false}
     # 中科检测公司根部门ID；该部门及其子部门视为公司内部部门，其余部门按客户部门处理
     company-root-dept-id: 100

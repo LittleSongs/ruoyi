@@ -145,6 +145,8 @@ public class NdtProperties
     {
         private Long companyRootDeptId;
 
+        private boolean allowAnonymousViewerApi;
+
         public Long getCompanyRootDeptId()
         {
             return companyRootDeptId;
@@ -153,6 +155,16 @@ public class NdtProperties
         public void setCompanyRootDeptId(Long companyRootDeptId)
         {
             this.companyRootDeptId = companyRootDeptId;
+        }
+
+        public boolean isAllowAnonymousViewerApi()
+        {
+            return allowAnonymousViewerApi;
+        }
+
+        public void setAllowAnonymousViewerApi(boolean allowAnonymousViewerApi)
+        {
+            this.allowAnonymousViewerApi = allowAnonymousViewerApi;
         }
     }
 }

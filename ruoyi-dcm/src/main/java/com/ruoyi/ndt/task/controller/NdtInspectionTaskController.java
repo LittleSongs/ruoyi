@@ -20,6 +20,8 @@ import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.ndt.task.domain.NdtInspectionTask;
 import com.ruoyi.ndt.task.domain.NdtTaskUser;
 import com.ruoyi.ndt.task.service.INdtInspectionTaskService;
+import com.ruoyi.ndt.organization.service.NdtDicomOrganizationService;
+import com.ruoyi.ndt.security.NdtViewerAccessService;
 
 @RestController
 @RequestMapping("/ndt/task")
@@ -27,6 +29,12 @@ public class NdtInspectionTaskController extends BaseController
 {
     @Autowired
     private INdtInspectionTaskService taskService;
+
+    @Autowired
+    private NdtDicomOrganizationService organizationService;
+
+    @Autowired
+    private NdtViewerAccessService viewerAccessService;
 
     @PreAuthorize("@ss.hasPermi('ndt:task:list')")
     @GetMapping("/list")
@@ -90,6 +98,14 @@ public class NdtInspectionTaskController extends BaseController
     public AjaxResult users(@PathVariable Long taskId)
     {
         return success(taskService.selectNdtTaskUsersByTaskId(taskId));
+    }
+
+    @Anonymous
+    @GetMapping("/{taskId}/object-tree")
+    public AjaxResult objectTree(@PathVariable Long taskId)
+    {
+        viewerAccessService.checkReadTask(taskId);
+        return success(organizationService.selectObjectTree(taskId));
     }
 
     @PreAuthorize("@ss.hasPermi('ndt:task:ohif')")

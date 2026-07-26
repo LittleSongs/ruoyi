@@ -23,6 +23,8 @@ import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.ndt.evaluation.domain.NdtEvaluation;
 import com.ruoyi.ndt.evaluation.service.INdtEvaluationService;
+import com.ruoyi.ndt.evaluation.service.NdtEvaluationHistoryService;
+import com.ruoyi.ndt.security.NdtViewerAccessService;
 
 @RestController
 @RequestMapping("/ndt/evaluation")
@@ -32,7 +34,12 @@ public class NdtEvaluationController extends BaseController
     @Autowired
     private INdtEvaluationService evaluationService;
 
-    @Anonymous
+    @Autowired
+    private NdtEvaluationHistoryService evaluationHistoryService;
+
+    @Autowired
+    private NdtViewerAccessService viewerAccessService;
+
     @GetMapping("/list")
     public TableDataInfo list(NdtEvaluation evaluation)
     {
@@ -41,23 +48,20 @@ public class NdtEvaluationController extends BaseController
         return getDataTable(list);
     }
 
-    @Anonymous
     @GetMapping("/{id}")
     public AjaxResult getInfo(@PathVariable Long id)
     {
         return success(evaluationService.selectNdtEvaluationById(id));
     }
 
-    @Anonymous
-    @Log(title = "NDT评定结果", businessType = BusinessType.INSERT)
+    @Log(title = "NDT evaluation", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@RequestBody NdtEvaluation evaluation)
     {
         return toAjax(evaluationService.saveNdtEvaluation(evaluation, null, "anonymous"));
     }
 
-    @Anonymous
-    @Log(title = "NDT评定SR批量提交", businessType = BusinessType.INSERT)
+    @Log(title = "NDT evaluation SR batch submission", businessType = BusinessType.INSERT)
     @PostMapping("/batch-submit-sr")
     public AjaxResult batchSubmitSr(@RequestParam("taskId") Long taskId,
             @RequestParam("evaluationsJson") String evaluationsJson,
@@ -67,7 +71,6 @@ public class NdtEvaluationController extends BaseController
                 "anonymous"));
     }
 
-    @Anonymous
     @GetMapping("/by-sr")
     public AjaxResult listBySr(@RequestParam("taskId") Long taskId,
             @RequestParam("srSopInstanceUID") String srSopInstanceUid)
@@ -75,16 +78,22 @@ public class NdtEvaluationController extends BaseController
         return success(evaluationService.selectNdtEvaluationListBySr(taskId, srSopInstanceUid));
     }
 
-    @Anonymous
-    @Log(title = "NDT评定结果", businessType = BusinessType.UPDATE)
+    @GetMapping("/history")
+    public AjaxResult history(@RequestParam("taskId") Long taskId,
+            @RequestParam("sopInstanceUID") String sopInstanceUid)
+    {
+        viewerAccessService.checkReadTask(taskId);
+        return success(evaluationHistoryService.selectHistory(taskId, sopInstanceUid));
+    }
+
+    @Log(title = "NDT evaluation", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@RequestBody NdtEvaluation evaluation)
     {
         return toAjax(evaluationService.saveNdtEvaluation(evaluation, null, "anonymous"));
     }
 
-    @Anonymous
-    @Log(title = "NDT评定结果", businessType = BusinessType.DELETE)
+    @Log(title = "NDT evaluation", businessType = BusinessType.DELETE)
     @DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable Long[] ids)
     {

@@ -40,6 +40,14 @@ public class NdtConstants
     public static final String RELATED_TYPE_SR = "SR";
     public static final String RELATED_TYPE_EVALUATION = "EVALUATION";
 
+    public static final String OBJECT_TYPE_ORIGINAL = "ORIGINAL";
+    public static final String OBJECT_TYPE_PROCESSED_IMAGE = "PROCESSED_IMAGE";
+    public static final String OBJECT_TYPE_SNAPSHOT = "SNAPSHOT";
+    public static final String OBJECT_TYPE_PRESENTATION_STATE = "PRESENTATION_STATE";
+    public static final String OBJECT_TYPE_SR = "SR";
+    public static final String OBJECT_TYPE_OTHER_DERIVED = "OTHER_DERIVED";
+    public static final String SERIES_ROLE_LEGACY_MIXED = "LEGACY_MIXED";
+
     public static final String DEL_FLAG_NORMAL = "0";
     public static final String DEL_FLAG_DELETED = "2";
     public static final String YES = "1";

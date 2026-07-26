@@ -20,6 +20,7 @@ import com.ruoyi.ndt.evaluation.mapper.NdtEvaluationMapper;
 import com.ruoyi.ndt.evaluation.service.INdtEvaluationService;
 import com.ruoyi.ndt.integrity.service.INdtIntegrityService;
 import com.ruoyi.ndt.orthanc.OrthancService;
+import com.ruoyi.ndt.organization.service.NdtDicomOrganizationService;
 import com.ruoyi.ndt.relation.domain.NdtDicomObjectRelation;
 import com.ruoyi.ndt.relation.mapper.NdtDicomObjectRelationMapper;
 import com.ruoyi.ndt.security.NdtAccessService;
@@ -49,6 +50,9 @@ public class NdtEvaluationServiceImpl implements INdtEvaluationService
 
     @Autowired
     private INdtIntegrityService integrityService;
+
+    @Autowired
+    private NdtDicomOrganizationService organizationService;
 
     @Override
     public List<NdtEvaluation> selectNdtEvaluationList(NdtEvaluation evaluation)
@@ -153,6 +157,9 @@ public class NdtEvaluationServiceImpl implements INdtEvaluationService
             savedEvaluations.add(evaluation);
             insertSrRelation(taskId, evaluation, srContext);
         }
+        organizationService.registerRelated(taskId, srContext.result.getDicomInstanceId(),
+                evaluations.stream().map(NdtEvaluation::getSopInstanceUid).toList(),
+                NdtConstants.OBJECT_TYPE_SR);
         taskMapper.updateNdtInspectionTaskStatus(taskId, NdtConstants.TASK_STATUS_EVALUATED, username);
 
         NdtEvaluationSrSubmitResult result = new NdtEvaluationSrSubmitResult();

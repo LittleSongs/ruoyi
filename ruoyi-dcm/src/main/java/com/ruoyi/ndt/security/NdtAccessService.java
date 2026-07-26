@@ -109,6 +109,11 @@ public class NdtAccessService
         }
     }
 
+    public boolean taskExists(Long taskId)
+    {
+        return taskId != null && taskMapper.selectNdtInspectionTaskById(taskId) != null;
+    }
+
     public void checkUploadTask(Long taskId)
     {
         if (!canUploadTask(taskId))

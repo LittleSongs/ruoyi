@@ -24,6 +24,7 @@ import com.ruoyi.ndt.integrity.domain.NdtDicomIntegrityRecord;
 import com.ruoyi.ndt.integrity.mapper.NdtDicomIntegrityRecordMapper;
 import com.ruoyi.ndt.integrity.service.INdtIntegrityService;
 import com.ruoyi.ndt.orthanc.OrthancService;
+import com.ruoyi.ndt.organization.service.NdtDicomOrganizationService;
 import com.ruoyi.ndt.relation.domain.NdtDicomObjectRelation;
 import com.ruoyi.ndt.relation.mapper.NdtDicomObjectRelationMapper;
 import com.ruoyi.ndt.security.NdtAccessService;
@@ -59,6 +60,9 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
 
     @Autowired
     private DcmUploadValidationService validationService;
+
+    @Autowired
+    private NdtDicomOrganizationService organizationService;
 
     @Override
     public List<NdtDicomInstance> selectNdtDicomInstanceList(NdtDicomInstance instance)
@@ -135,6 +139,7 @@ public class NdtDicomInstanceServiceImpl implements INdtDicomInstanceService
 
         NdtDicomInstance instance = upsertDicomInstance(task, file, username, userId, orthancStudyId,
                 orthancSeriesId, orthancInstanceId, tags, studyUid, seriesUid, sopUid);
+        organizationService.registerOriginal(taskId, instance.getId());
         validationService.markOrthancUploaded(validationResult.getRecordId(), orthancInstanceId);
         upsertIntegrityRecord(instance, fileSha256, userId);
         taskMapper.updateNdtInspectionTaskStudy(taskId, studyUid, orthancStudyId,
