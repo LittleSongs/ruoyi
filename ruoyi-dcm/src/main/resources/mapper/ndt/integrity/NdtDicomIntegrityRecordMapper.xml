@@ -5,7 +5,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 <mapper namespace="com.ruoyi.ndt.integrity.mapper.NdtDicomIntegrityRecordMapper">
     <resultMap type="NdtDicomIntegrityRecord" id="NdtDicomIntegrityRecordResult">
         <id property="id" column="id"/>
-        <result property="dicomInstanceId" column="dicom_instance_id"/>
+        <result property="objectId" column="object_id"/>
         <result property="studyInstanceUid" column="study_instance_uid"/>
         <result property="seriesInstanceUid" column="series_instance_uid"/>
         <result property="sopInstanceUid" column="sop_instance_uid"/>
@@ -27,12 +27,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectNdtDicomIntegrityRecordVo">
-        select r.id, i.id as dicom_instance_id, r.study_instance_uid, r.series_instance_uid, r.sop_instance_uid, r.orthanc_instance_id,
+        select r.id, o.id as object_id, r.study_instance_uid, r.series_instance_uid, r.sop_instance_uid, r.orthanc_instance_id,
                r.pixel_data_sha256, r.metadata_sha256, r.file_sha256, r.signed_content, r.signature_algorithm,
                r.signature_value, r.public_key_id, r.import_user_id, r.import_time, r.last_verify_time,
                r.verify_status, r.remark, r.create_time, r.update_time
           from ndt_dicom_integrity_record r
-          left join ndt_dicom_instance i on i.sop_instance_uid = r.sop_instance_uid and i.del_flag = '0'
+          left join ndt_dicom_object o on o.sop_instance_uid = r.sop_instance_uid and o.del_flag = '0'
+          left join ndt_dicom_series ds on ds.id = o.series_id and ds.del_flag = '0'
+          left join ndt_inspection_position p on p.id = ds.position_id and p.del_flag = '0'
+          left join ndt_workpiece w on w.id = p.workpiece_id and w.del_flag = '0'
     </sql>
 
     <select id="selectNdtDicomIntegrityRecordList" parameterType="NdtDicomIntegrityRecord" resultMap="NdtDicomIntegrityRecordResult">
@@ -46,10 +49,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="params.scopeType == 'ASSIGNED'">
                 and exists (
                     select 1 from ndt_task_user tu
-                     where tu.task_id = i.task_id and tu.user_id = #{params.scopeUserId} and tu.can_view = '1'
+                     where tu.task_id = w.task_id and tu.user_id = #{params.scopeUserId} and tu.can_view = '1'
                 )
             </if>
-            <if test="params.scopeType == 'CUSTOMER_DEPT'">and i.customer_dept_id = #{params.scopeDeptId}</if>
             <if test="params.scopeType == 'NONE'">and 1 = 0</if>
         </where>
         order by r.import_time desc, r.id desc

@@ -12,7 +12,7 @@ public class NdtDicomIntegrityRecord extends BaseEntity
     private static final long serialVersionUID = 1L;
 
     private Long id;
-    private Long dicomInstanceId;
+    private Long objectId;
     private String studyInstanceUid;
     private String seriesInstanceUid;
     private String sopInstanceUid;
@@ -33,8 +33,8 @@ public class NdtDicomIntegrityRecord extends BaseEntity
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Long getDicomInstanceId() { return dicomInstanceId; }
-    public void setDicomInstanceId(Long dicomInstanceId) { this.dicomInstanceId = dicomInstanceId; }
+    public Long getObjectId() { return objectId; }
+    public void setObjectId(Long objectId) { this.objectId = objectId; }
     public String getStudyInstanceUid() { return studyInstanceUid; }
     public void setStudyInstanceUid(String studyInstanceUid) { this.studyInstanceUid = studyInstanceUid; }
     public String getSeriesInstanceUid() { return seriesInstanceUid; }

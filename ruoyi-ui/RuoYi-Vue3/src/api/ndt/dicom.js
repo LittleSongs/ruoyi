@@ -1,45 +1,23 @@
 import request from '@/utils/request'
 
-export function listDicom(query) {
-  return request({ url: '/ndt/dicom/list', method: 'get', params: query })
+export const listDicomObject = query => request({ url: '/ndt/dicom/object/list', method: 'get', params: query })
+export const getDicomObject = id => request({ url: `/ndt/dicom/object/${id}`, method: 'get' })
+export const getObjectTags = id => request({ url: `/ndt/dicom/object/${id}/tags`, method: 'get' })
+export const getObjectRelations = id => request({ url: `/ndt/dicom/object/${id}/relations`, method: 'get' })
+export const createDerivedObject = data => request({ url: '/ndt/dicom/object/derived', method: 'post', data })
+export const deleteDicomObject = ids => request({ url: `/ndt/dicom/object/${ids}`, method: 'delete' })
+export const downloadDicomObject = id => request({ url: `/ndt/dicom/object/${id}/download`, method: 'get', responseType: 'blob' })
+export function uploadDicomObject(positionId, file) {
+  const data = new FormData()
+  data.append('positionId', positionId)
+  data.append('file', file)
+  return request({ url: '/ndt/dicom/object/upload', method: 'post', data, headers: { 'Content-Type': 'multipart/form-data' } })
 }
 
-export function getDicom(id) {
-  return request({ url: '/ndt/dicom/' + id, method: 'get' })
-}
-
-export function getDicomTags(id) {
-  return request({ url: '/ndt/dicom/' + id + '/tags', method: 'get' })
-}
-
-export function getDicomTagOptions(id) {
-  return request({ url: '/ndt/dicom/' + id + '/tag-options', method: 'get' })
-}
-
-export function addDicomTag(id, data) {
-  return request({ url: '/ndt/dicom/' + id + '/tags', method: 'post', data })
-}
-
-export function updateDicomTag(id, data) {
-  return request({ url: '/ndt/dicom/' + id + '/tags', method: 'put', data })
-}
-
-export function removeDicomTag(id, data) {
-  return request({ url: '/ndt/dicom/' + id + '/tags', method: 'delete', data })
-}
-
-export function downloadDicom(id) {
-  return request({ url: '/ndt/dicom/download/' + id, method: 'get' })
-}
-
-export function uploadDicom(taskId, file) {
-  const formData = new FormData()
-  formData.append('taskId', taskId)
-  formData.append('file', file)
-  return request({
-    url: '/ndt/dicom/upload',
-    method: 'post',
-    data: formData,
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+export function uploadDerivedDicomObject(sourceObjectId, objectType, file) {
+  const data = new FormData()
+  data.append('sourceObjectId', sourceObjectId)
+  data.append('objectType', objectType)
+  data.append('file', file)
+  return request({ url: '/ndt/dicom/object/derived/upload', method: 'post', data, headers: { 'Content-Type': 'multipart/form-data' } })
 }

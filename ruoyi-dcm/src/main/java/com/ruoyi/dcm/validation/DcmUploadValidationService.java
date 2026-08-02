@@ -65,7 +65,12 @@ public class DcmUploadValidationService
         result.getErrors().addAll(customResult.getErrors().stream().map(DcmValidationFailure::getMessage).collect(Collectors.toList()));
         if (!"PASS".equals(officialResult.getStatus()))
         {
-            result.getErrors().add("validate_iods 官方校验失败：" + officialResult.getStdout());
+            String detail = officialResult.getStdout();
+            if (detail == null || detail.trim().isEmpty())
+            {
+                detail = officialResult.getStderr();
+            }
+            result.getErrors().add("validate_iods 官方校验失败：" + (detail == null ? "" : detail.trim()));
         }
         return result;
     }

@@ -41,9 +41,9 @@ public class NdtIntegrityController extends BaseController
 
     @PreAuthorize("@ss.hasPermi('ndt:integrity:verify')")
     @Log(title = "NDT DICOM完整性重检", businessType = BusinessType.UPDATE)
-    @PostMapping("/verify/{dicomInstanceId}")
-    public AjaxResult verify(@PathVariable Long dicomInstanceId)
+    @PostMapping("/verify/{objectId}")
+    public AjaxResult verify(@PathVariable Long objectId)
     {
-        return success(integrityService.verifyByDicomInstanceId(dicomInstanceId));
+        return success(integrityService.verifyByObjectId(objectId));
     }
 }

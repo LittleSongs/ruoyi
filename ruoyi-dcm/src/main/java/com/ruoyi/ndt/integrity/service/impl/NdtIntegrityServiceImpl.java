@@ -5,13 +5,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.ndt.common.NdtConstants;
-import com.ruoyi.ndt.dicom.domain.NdtDicomInstance;
-import com.ruoyi.ndt.dicom.mapper.NdtDicomInstanceMapper;
+import com.ruoyi.ndt.dicom.domain.NdtDicomObject;
+import com.ruoyi.ndt.dicom.mapper.NdtDicomObjectMapper;
 import com.ruoyi.ndt.integrity.domain.NdtDicomIntegrityRecord;
 import com.ruoyi.ndt.integrity.mapper.NdtDicomIntegrityRecordMapper;
 import com.ruoyi.ndt.integrity.service.INdtIntegrityService;
@@ -21,95 +20,52 @@ import com.ruoyi.ndt.security.NdtAccessService;
 @Service
 public class NdtIntegrityServiceImpl implements INdtIntegrityService
 {
-    @Autowired(required = false)
-    private NdtDicomIntegrityRecordMapper integrityRecordMapper;
-
-    @Autowired(required = false)
-    private NdtDicomInstanceMapper dicomInstanceMapper;
-
-    @Autowired(required = false)
-    private OrthancService orthancService;
-
-    @Autowired(required = false)
-    private NdtAccessService accessService;
-
-    @Override
-    public List<NdtDicomIntegrityRecord> selectNdtDicomIntegrityRecordList(NdtDicomIntegrityRecord record)
+    private final NdtDicomIntegrityRecordMapper mapper;
+    private final NdtDicomObjectMapper objectMapper;
+    private final OrthancService orthanc;
+    private final NdtAccessService access;
+    public NdtIntegrityServiceImpl(NdtDicomIntegrityRecordMapper mapper, NdtDicomObjectMapper objectMapper,
+            OrthancService orthanc, NdtAccessService access)
     {
-        if (accessService != null)
-        {
-            accessService.applyTaskListScope(record);
-        }
-        return integrityRecordMapper.selectNdtDicomIntegrityRecordList(record);
+        this.mapper=mapper;this.objectMapper=objectMapper;this.orthanc=orthanc;this.access=access;
     }
-
-    @Override
+    public List<NdtDicomIntegrityRecord> selectNdtDicomIntegrityRecordList(NdtDicomIntegrityRecord query)
+    {
+        access.applyTaskListScope(query);return mapper.selectNdtDicomIntegrityRecordList(query);
+    }
     public NdtDicomIntegrityRecord selectNdtDicomIntegrityRecordById(Long id)
     {
-        return integrityRecordMapper.selectNdtDicomIntegrityRecordById(id);
+        NdtDicomIntegrityRecord value=mapper.selectNdtDicomIntegrityRecordById(id);
+        if(value!=null && value.getObjectId()!=null)
+        {
+            NdtDicomObject object=objectMapper.selectById(value.getObjectId());
+            if(object!=null)access.checkViewTask(object.getTaskId());
+        }
+        return value;
     }
-
-    @Override
     public String calculateSha256(byte[] content)
     {
         try
         {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(content);
-            StringBuilder value = new StringBuilder(hash.length * 2);
-            for (byte item : hash)
-            {
-                value.append(String.format("%02x", item));
-            }
+            byte[] hash=MessageDigest.getInstance("SHA-256").digest(content);
+            StringBuilder value=new StringBuilder(hash.length*2);
+            for(byte item:hash)value.append(String.format("%02x",item));
             return value.toString();
         }
-        catch (NoSuchAlgorithmException ex)
-        {
-            throw new ServiceException("当前JDK不支持SHA-256算法");
-        }
+        catch(NoSuchAlgorithmException ex){throw new ServiceException("当前JDK不支持SHA-256算法");}
     }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public NdtDicomIntegrityRecord verifyByDicomInstanceId(Long dicomInstanceId)
+    @Transactional(rollbackFor=Exception.class)
+    public NdtDicomIntegrityRecord verifyByObjectId(Long objectId)
     {
-        NdtDicomInstance instance = dicomInstanceMapper.selectNdtDicomInstanceById(dicomInstanceId);
-        if (instance == null)
-        {
-            throw new ServiceException("DICOM实例不存在");
-        }
-        if (accessService != null && !accessService.canViewTask(instance.getTaskId()))
-        {
-            throw new ServiceException("无权访问该检测任务");
-        }
-        NdtDicomIntegrityRecord record = integrityRecordMapper
-                .selectNdtDicomIntegrityRecordBySopUid(instance.getSopInstanceUid());
-        if (record == null)
-        {
-            throw new ServiceException("完整性记录不存在");
-        }
-        String currentSha256 = calculateSha256(orthancService.downloadInstanceFile(instance.getOrthancInstanceId()));
-        String status = currentSha256.equalsIgnoreCase(record.getFileSha256())
-                ? NdtConstants.INTEGRITY_STATUS_PASS : NdtConstants.INTEGRITY_STATUS_FAIL;
-        record.setVerifyStatus(status);
-        record.setLastVerifyTime(new Date());
-        integrityRecordMapper.updateNdtDicomIntegrityRecord(record);
-        instance.setIntegrityStatus(status);
-        dicomInstanceMapper.updateNdtDicomInstance(instance);
-        return record;
+        NdtDicomObject object=objectMapper.selectById(objectId);
+        if(object==null)throw new ServiceException("DICOM对象不存在");
+        access.checkViewTask(object.getTaskId());
+        NdtDicomIntegrityRecord record=mapper.selectNdtDicomIntegrityRecordBySopUid(object.getSopInstanceUid());
+        if(record==null)throw new ServiceException("完整性记录不存在");
+        String hash=calculateSha256(orthanc.downloadInstanceFile(object.getOrthancInstanceId()));
+        record.setVerifyStatus(hash.equalsIgnoreCase(record.getFileSha256())?NdtConstants.INTEGRITY_STATUS_PASS:NdtConstants.INTEGRITY_STATUS_FAIL);
+        record.setLastVerifyTime(new Date());mapper.updateNdtDicomIntegrityRecord(record);return record;
     }
-
-    @Override
-    public String signContent(String content)
-    {
-        // TODO: Load the formal private key and sign with java.security in phase 2.
-        return Base64.getEncoder().encodeToString(calculateSha256(content.getBytes()).getBytes());
-    }
-
-    @Override
-    public boolean verifySignature(String content, String signature)
-    {
-        // TODO: Load the formal public key and verify with java.security in phase 2.
-        return signContent(content).equals(signature);
-    }
+    public String signContent(String content){return Base64.getEncoder().encodeToString(calculateSha256(content.getBytes()).getBytes());}
+    public boolean verifySignature(String content,String signature){return signContent(content).equals(signature);}
 }

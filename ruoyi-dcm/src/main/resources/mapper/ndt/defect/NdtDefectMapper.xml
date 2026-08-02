@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.defect.mapper.NdtDefectMapper">
+    <resultMap id="Map" type="com.ruoyi.ndt.defect.domain.NdtDefect">
+        <id property="id" column="id"/><result property="originalObjectId" column="original_object_id"/>
+        <result property="taskId" column="task_id"/><result property="defectNo" column="defect_no"/>
+        <result property="defectType" column="defect_type"/><result property="roiType" column="roi_type"/>
+        <result property="roiDataJson" column="roi_data_json"/><result property="description" column="description"/>
+        <result property="createBy" column="create_by"/><result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/><result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+    <sql id="base">select d.*,w.task_id from ndt_defect d
+        join ndt_dicom_object o on o.id=d.original_object_id and o.del_flag='0'
+        join ndt_dicom_series ds on ds.id=o.series_id and ds.del_flag='0'
+        join ndt_inspection_position p on p.id=ds.position_id and p.del_flag='0'
+        join ndt_workpiece w on w.id=p.workpiece_id and w.del_flag='0'</sql>
+    <select id="selectList" resultMap="Map"><include refid="base"/><where>d.del_flag='0'
+        <if test="originalObjectId != null">and d.original_object_id=#{originalObjectId}</if>
+        <if test="taskId != null">and w.task_id=#{taskId}</if>
+        <if test="defectType != null and defectType != ''">and d.defect_type=#{defectType}</if>
+        <if test="params.scopeType == 'ASSIGNED'">and exists(select 1 from ndt_task_user tu where tu.task_id=w.task_id and tu.user_id=#{params.scopeUserId} and tu.can_view='1')</if>
+        <if test="params.scopeType == 'NONE'">and 1=0</if>
+    </where>order by d.create_time,d.id</select>
+    <select id="selectById" resultMap="Map"><include refid="base"/> where d.id=#{id} and d.del_flag='0'</select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">insert into ndt_defect(original_object_id,defect_no,defect_type,roi_type,roi_data_json,description,create_by,create_time,update_by,update_time,del_flag) values(#{originalObjectId},#{defectNo},#{defectType},#{roiType},#{roiDataJson},#{description},#{createBy},sysdate(),#{updateBy},sysdate(),'0')</insert>
+    <update id="update">update ndt_defect set defect_no=#{defectNo},defect_type=#{defectType},roi_type=#{roiType},roi_data_json=#{roiDataJson},description=#{description},update_by=#{updateBy},update_time=sysdate() where id=#{id} and del_flag='0'</update>
+    <update id="softDeleteByIds">update ndt_defect set del_flag='2',update_time=sysdate() where id in <foreach collection="array" item="id" open="(" close=")" separator=",">#{id}</foreach></update>
+</mapper>

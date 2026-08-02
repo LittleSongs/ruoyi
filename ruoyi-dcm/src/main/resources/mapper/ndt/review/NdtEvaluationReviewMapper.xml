@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.review.mapper.NdtEvaluationReviewMapper">
+    <resultMap id="Map" type="com.ruoyi.ndt.review.domain.NdtEvaluationReview">
+        <id property="id" column="id"/><result property="evaluationId" column="evaluation_id"/>
+        <result property="reviewResult" column="review_result"/><result property="reviewComment" column="review_comment"/>
+        <result property="reviewerId" column="reviewer_id"/><result property="reviewerName" column="reviewer_name"/>
+        <result property="reviewTime" column="review_time"/><result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+    <select id="selectByEvaluationId" resultMap="Map">select r.*,u.nick_name reviewer_name from ndt_evaluation_review r left join sys_user u on u.user_id=r.reviewer_id where r.evaluation_id=#{evaluationId} order by r.review_time,r.id</select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">insert into ndt_evaluation_review(evaluation_id,review_result,review_comment,reviewer_id,review_time,create_by,create_time) values(#{evaluationId},#{reviewResult},#{reviewComment},#{reviewerId},#{reviewTime},#{createBy},sysdate())</insert>
+</mapper>

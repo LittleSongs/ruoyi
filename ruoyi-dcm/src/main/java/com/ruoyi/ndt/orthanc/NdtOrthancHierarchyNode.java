@@ -17,7 +17,7 @@ public class NdtOrthancHierarchyNode implements Serializable
     private String title;
     private String subtitle;
     private String orthancId;
-    private Long dicomInstanceId;
+    private Long objectId;
     private String studyInstanceUid;
     private String seriesInstanceUid;
     private String sopInstanceUid;
@@ -87,14 +87,14 @@ public class NdtOrthancHierarchyNode implements Serializable
         this.orthancId = orthancId;
     }
 
-    public Long getDicomInstanceId()
+    public Long getObjectId()
     {
-        return dicomInstanceId;
+        return objectId;
     }
 
-    public void setDicomInstanceId(Long dicomInstanceId)
+    public void setObjectId(Long objectId)
     {
-        this.dicomInstanceId = dicomInstanceId;
+        this.objectId = objectId;
     }
 
     public String getStudyInstanceUid()

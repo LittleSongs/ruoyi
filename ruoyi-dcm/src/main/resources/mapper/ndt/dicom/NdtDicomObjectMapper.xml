@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.dicom.mapper.NdtDicomObjectMapper">
+    <resultMap id="Map" type="com.ruoyi.ndt.dicom.domain.NdtDicomObject">
+        <id property="id" column="id"/><result property="seriesId" column="series_id"/>
+        <result property="studyId" column="study_id"/><result property="positionId" column="position_id"/>
+        <result property="workpieceId" column="workpiece_id"/><result property="taskId" column="task_id"/>
+        <result property="positionName" column="position_name"/><result property="objectType" column="object_type"/>
+        <result property="objectName" column="object_name"/><result property="storageType" column="storage_type"/>
+        <result property="orthancInstanceId" column="orthanc_instance_id"/><result property="filePath" column="file_path"/>
+        <result property="objectKey" column="object_key"/><result property="mimeType" column="mime_type"/>
+        <result property="studyUid" column="study_uid"/><result property="seriesUid" column="series_uid"/>
+        <result property="sopInstanceUid" column="sop_instance_uid"/><result property="sopClassUid" column="sop_class_uid"/>
+        <result property="parametersJson" column="parameters_json"/><result property="metadataJson" column="metadata_json"/>
+        <result property="sha256" column="sha256"/><result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/><result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/><result property="delFlag" column="del_flag"/>
+    </resultMap>
+    <sql id="base">select o.*,ds.study_id,ds.position_id,ds.workpiece_id,ds.series_instance_uid series_uid,
+        s.study_instance_uid study_uid,p.position_name,w.task_id from ndt_dicom_object o
+        join ndt_dicom_series ds on ds.id=o.series_id and ds.del_flag='0'
+        join ndt_inspection_study s on s.id=ds.study_id and s.del_flag='0'
+        join ndt_inspection_position p on p.id=ds.position_id and p.del_flag='0'
+        join ndt_workpiece w on w.id=p.workpiece_id and w.del_flag='0'</sql>
+    <select id="selectList" resultMap="Map"><include refid="base"/><where>o.del_flag='0'
+        <if test="seriesId != null">and o.series_id=#{seriesId}</if>
+        <if test="studyId != null">and ds.study_id=#{studyId}</if>
+        <if test="positionId != null">and ds.position_id=#{positionId}</if>
+        <if test="workpieceId != null">and ds.workpiece_id=#{workpieceId}</if>
+        <if test="taskId != null">and w.task_id=#{taskId}</if>
+        <if test="objectType != null and objectType != ''">and o.object_type=#{objectType}</if>
+        <if test="studyUid != null and studyUid != ''">and s.study_instance_uid=#{studyUid}</if>
+        <if test="sopInstanceUid != null and sopInstanceUid != ''">and o.sop_instance_uid=#{sopInstanceUid}</if>
+        <if test="params.scopeType == 'ASSIGNED'">and exists(select 1 from ndt_task_user tu where tu.task_id=w.task_id and tu.user_id=#{params.scopeUserId} and tu.can_view='1')</if>
+        <if test="params.scopeType == 'NONE'">and 1=0</if>
+    </where>order by o.create_time desc,o.id desc</select>
+    <select id="selectByPositionId" resultMap="Map"><include refid="base"/> where ds.position_id=#{positionId} and o.del_flag='0' order by o.create_time,o.id</select>
+    <select id="selectByStudyAndPosition" resultMap="Map"><include refid="base"/> where ds.study_id=#{studyId} and ds.position_id=#{positionId} and o.del_flag='0' order by o.create_time,o.id</select>
+    <select id="selectById" resultMap="Map"><include refid="base"/> where o.id=#{id} and o.del_flag='0'</select>
+    <select id="selectBySopInstanceUid" resultMap="Map"><include refid="base"/> where o.sop_instance_uid=#{sopInstanceUid} and o.del_flag='0' limit 1</select>
+    <select id="selectOriginalBySeriesId" resultMap="Map"><include refid="base"/> where o.series_id=#{seriesId} and o.object_type='ORIGINAL_IMAGE' and o.del_flag='0' limit 1</select>
+    <select id="selectOriginalByStudyAndPosition" resultMap="Map"><include refid="base"/> where ds.study_id=#{studyId} and ds.position_id=#{positionId} and o.object_type='ORIGINAL_IMAGE' and o.del_flag='0' limit 1</select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">insert into ndt_dicom_object(series_id,object_type,object_name,storage_type,orthanc_instance_id,file_path,object_key,mime_type,sop_instance_uid,sop_class_uid,parameters_json,metadata_json,sha256,create_by,create_time,update_by,update_time,del_flag)
+        values(#{seriesId},#{objectType},#{objectName},#{storageType},#{orthancInstanceId},#{filePath},#{objectKey},#{mimeType},#{sopInstanceUid},#{sopClassUid},#{parametersJson},#{metadataJson},#{sha256},#{createBy},sysdate(),#{updateBy},sysdate(),'0')</insert>
+    <update id="update">update ndt_dicom_object set series_id=#{seriesId},object_type=#{objectType},object_name=#{objectName},storage_type=#{storageType},orthanc_instance_id=#{orthancInstanceId},file_path=#{filePath},object_key=#{objectKey},mime_type=#{mimeType},sop_instance_uid=#{sopInstanceUid},sop_class_uid=#{sopClassUid},parameters_json=#{parametersJson},metadata_json=#{metadataJson},sha256=#{sha256},update_by=#{updateBy},update_time=sysdate() where id=#{id} and del_flag='0'</update>
+    <update id="softDeleteByIds">update ndt_dicom_object set del_flag='2',update_time=sysdate() where id in <foreach collection="array" item="id" open="(" close=")" separator=",">#{id}</foreach></update>
+</mapper>

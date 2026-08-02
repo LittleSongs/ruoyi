@@ -16,8 +16,6 @@ public class NdtProperties
 
     private Ohif ohif = new Ohif();
 
-    private Security security = new Security();
-
     public Orthanc getOrthanc()
     {
         return orthanc;
@@ -38,22 +36,18 @@ public class NdtProperties
         this.ohif = ohif;
     }
 
-    public Security getSecurity()
-    {
-        return security;
-    }
-
-    public void setSecurity(Security security)
-    {
-        this.security = security;
-    }
-
     public String buildViewerUrl(String studyInstanceUid)
     {
         return buildViewerUrl(studyInstanceUid, null, null, null);
     }
 
-    public String buildViewerUrl(String studyInstanceUid, Long taskId, String token, Boolean canEvaluate)
+    public String buildViewerUrl(String studyInstanceUid, Long taskId, Boolean canEvaluate)
+    {
+        return buildViewerUrl(studyInstanceUid, taskId, null, canEvaluate);
+    }
+
+    public String buildViewerUrl(String studyInstanceUid, Long taskId, Long studyId,
+            Boolean canEvaluate)
     {
         String baseUrl = ohif.getViewerUrl();
         if (baseUrl == null || baseUrl.isEmpty())
@@ -69,9 +63,9 @@ public class NdtProperties
         {
             builder.append("&taskId=").append(taskId);
         }
-        if (token != null && !token.isEmpty())
+        if (studyId != null)
         {
-            builder.append("&token=").append(URLEncoder.encode(token, StandardCharsets.UTF_8));
+            builder.append("&studyId=").append(studyId);
         }
         if (canEvaluate != null)
         {
@@ -141,30 +135,4 @@ public class NdtProperties
         }
     }
 
-    public static class Security
-    {
-        private Long companyRootDeptId;
-
-        private boolean allowAnonymousViewerApi;
-
-        public Long getCompanyRootDeptId()
-        {
-            return companyRootDeptId;
-        }
-
-        public void setCompanyRootDeptId(Long companyRootDeptId)
-        {
-            this.companyRootDeptId = companyRootDeptId;
-        }
-
-        public boolean isAllowAnonymousViewerApi()
-        {
-            return allowAnonymousViewerApi;
-        }
-
-        public void setAllowAnonymousViewerApi(boolean allowAnonymousViewerApi)
-        {
-            this.allowAnonymousViewerApi = allowAnonymousViewerApi;
-        }
-    }
 }

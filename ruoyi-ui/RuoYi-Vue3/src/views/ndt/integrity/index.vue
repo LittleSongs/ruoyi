@@ -28,7 +28,7 @@
       <el-table-column label="最后校验" prop="lastVerifyTime" width="160" align="center"><template #default="scope">{{ parseTime(scope.row.lastVerifyTime) || '-' }}</template></el-table-column>
       <el-table-column label="操作" width="100" align="center" fixed="right">
         <template #default="scope">
-          <el-button link type="primary" icon="Refresh" :disabled="!scope.row.dicomInstanceId" @click="handleVerify(scope.row)" v-hasPermi="['ndt:integrity:verify']">重检</el-button>
+          <el-button link type="primary" icon="Refresh" :disabled="!scope.row.objectId" @click="handleVerify(scope.row)" v-hasPermi="['ndt:integrity:verify']">重检</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -50,6 +50,6 @@ const queryParams = reactive({ pageNum: 1, pageSize: 10, studyInstanceUid: undef
 function getList() { loading.value = true; listIntegrity(queryParams).then(res => { recordList.value = res.rows; total.value = res.total }).finally(() => { loading.value = false }) }
 function handleQuery() { queryParams.pageNum = 1; getList() }
 function resetQuery() { proxy.resetForm("queryRef"); handleQuery() }
-function handleVerify(row) { verifyIntegrity(row.dicomInstanceId).then(() => { proxy.$modal.msgSuccess("校验完成"); getList() }) }
+function handleVerify(row) { verifyIntegrity(row.objectId).then(() => { proxy.$modal.msgSuccess("校验完成"); getList() }) }
 onMounted(getList)
 </script>

@@ -1,7 +1,6 @@
 package com.ruoyi.ndt.task.service.impl;
 
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.exception.ServiceException;
@@ -9,92 +8,82 @@ import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.utils.uuid.IdUtils;
 import com.ruoyi.ndt.common.NdtConstants;
-import com.ruoyi.ndt.config.NdtProperties;
+import com.ruoyi.ndt.dicom.domain.NdtDicomObject;
+import com.ruoyi.ndt.dicom.mapper.NdtDicomObjectMapper;
+import com.ruoyi.ndt.position.domain.NdtInspectionPosition;
+import com.ruoyi.ndt.position.mapper.NdtInspectionPositionMapper;
 import com.ruoyi.ndt.security.NdtAccessService;
+import com.ruoyi.ndt.series.domain.NdtDicomSeries;
+import com.ruoyi.ndt.series.mapper.NdtDicomSeriesMapper;
+import com.ruoyi.ndt.study.domain.NdtInspectionStudy;
+import com.ruoyi.ndt.study.mapper.NdtInspectionStudyMapper;
 import com.ruoyi.ndt.task.domain.NdtInspectionTask;
 import com.ruoyi.ndt.task.domain.NdtTaskUser;
 import com.ruoyi.ndt.task.mapper.NdtInspectionTaskMapper;
 import com.ruoyi.ndt.task.mapper.NdtTaskUserMapper;
 import com.ruoyi.ndt.task.service.INdtInspectionTaskService;
+import com.ruoyi.ndt.task.vo.NdtTaskObjectTreeVo;
+import com.ruoyi.ndt.workpiece.domain.NdtWorkpiece;
+import com.ruoyi.ndt.workpiece.mapper.NdtWorkpieceMapper;
 
 @Service
 public class NdtInspectionTaskServiceImpl implements INdtInspectionTaskService
 {
-    @Autowired
-    private NdtInspectionTaskMapper taskMapper;
+    private final NdtInspectionTaskMapper taskMapper;
+    private final NdtTaskUserMapper taskUserMapper;
+    private final NdtWorkpieceMapper workpieceMapper;
+    private final NdtInspectionPositionMapper positionMapper;
+    private final NdtInspectionStudyMapper studyMapper;
+    private final NdtDicomSeriesMapper seriesMapper;
+    private final NdtDicomObjectMapper objectMapper;
+    private final NdtAccessService accessService;
 
-    @Autowired
-    private NdtTaskUserMapper taskUserMapper;
+    public NdtInspectionTaskServiceImpl(NdtInspectionTaskMapper taskMapper, NdtTaskUserMapper taskUserMapper,
+            NdtWorkpieceMapper workpieceMapper, NdtInspectionPositionMapper positionMapper,
+            NdtInspectionStudyMapper studyMapper, NdtDicomSeriesMapper seriesMapper,
+            NdtDicomObjectMapper objectMapper, NdtAccessService accessService)
+    {
+        this.taskMapper = taskMapper;
+        this.taskUserMapper = taskUserMapper;
+        this.workpieceMapper = workpieceMapper;
+        this.positionMapper = positionMapper;
+        this.studyMapper = studyMapper;
+        this.seriesMapper = seriesMapper;
+        this.objectMapper = objectMapper;
+        this.accessService = accessService;
+    }
 
-    @Autowired
-    private NdtAccessService accessService;
-
-    @Autowired
-    private NdtProperties properties;
-
-    @Override
     public List<NdtInspectionTask> selectNdtInspectionTaskList(NdtInspectionTask task)
     {
         accessService.applyTaskListScope(task);
         return taskMapper.selectNdtInspectionTaskList(task);
     }
 
-    @Override
-    public List<NdtInspectionTask> selectPublicNdtInspectionTaskList(NdtInspectionTask task)
-    {
-        return taskMapper.selectPublicNdtInspectionTaskList(task);
-    }
-
-    @Override
     public NdtInspectionTask selectNdtInspectionTaskById(Long id)
     {
         accessService.checkViewTask(id);
         NdtInspectionTask task = taskMapper.selectNdtInspectionTaskById(id);
-        if (task != null)
-        {
-            task.setTaskUsers(taskUserMapper.selectNdtTaskUsersByTaskId(id));
-            if (StringUtils.isNotEmpty(task.getStudyInstanceUid()))
-            {
-                task.setOhifViewerUrl(properties.buildViewerUrl(
-                        task.getStudyInstanceUid(),
-                        id,
-                        String.valueOf(id),
-                        accessService.canEvaluateTask(id)));
-            }
-        }
+        if (task != null) task.setTaskUsers(taskUserMapper.selectNdtTaskUsersByTaskId(id));
         return task;
     }
 
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public int insertNdtInspectionTask(NdtInspectionTask task, Long userId, String username)
     {
-        validateTask(task);
+        validate(task);
         if (StringUtils.isEmpty(task.getTaskNo()))
-        {
             task.setTaskNo("NDT" + DateUtils.dateTimeNow() + IdUtils.fastSimpleUUID().substring(0, 6));
-        }
         if (taskMapper.selectNdtInspectionTaskByTaskNo(task.getTaskNo()) != null)
-        {
             throw new ServiceException("检测任务编号已存在");
-        }
-        if (StringUtils.isEmpty(task.getStatus()))
-        {
-            task.setStatus(NdtConstants.TASK_STATUS_DRAFT);
-        }
-        if (StringUtils.isEmpty(task.getIsPublicSample()))
-        {
-            task.setIsPublicSample(NdtConstants.NO);
-        }
+        if (StringUtils.isEmpty(task.getStatus())) task.setStatus(NdtConstants.TASK_STATUS_DRAFT);
         task.setCreateBy(username);
         task.setUpdateBy(username);
-        task.setDelFlag(NdtConstants.DEL_FLAG_NORMAL);
         int rows = taskMapper.insertNdtInspectionTask(task);
         NdtTaskUser creator = new NdtTaskUser();
         creator.setTaskId(task.getId());
         creator.setUserId(userId);
         creator.setTaskRole(NdtConstants.TASK_ROLE_CREATOR);
-        creator.setCanEvaluate(NdtConstants.NO);
+        creator.setCanEvaluate(NdtConstants.YES);
         creator.setCanUpload(NdtConstants.YES);
         creator.setCanView(NdtConstants.YES);
         creator.setAssignedBy(username);
@@ -102,125 +91,169 @@ public class NdtInspectionTaskServiceImpl implements INdtInspectionTaskService
         return rows;
     }
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
     public int updateNdtInspectionTask(NdtInspectionTask task, String username)
     {
         accessService.checkManageTask(task.getId());
-        validateTask(task);
-        if (StringUtils.isEmpty(task.getStatus()))
-        {
-            task.setStatus(NdtConstants.TASK_STATUS_DRAFT);
-        }
-        if (StringUtils.isEmpty(task.getIsPublicSample()))
-        {
-            task.setIsPublicSample(NdtConstants.NO);
-        }
+        validate(task);
         task.setUpdateBy(username);
-        task.setDelFlag(NdtConstants.DEL_FLAG_NORMAL);
         return taskMapper.updateNdtInspectionTask(task);
     }
 
-    @Override
     public int deleteNdtInspectionTaskByIds(Long[] ids)
     {
-        for (Long id : ids)
-        {
-            accessService.checkManageTask(id);
-        }
+        for (Long id : ids) accessService.checkManageTask(id);
         return taskMapper.softDeleteNdtInspectionTaskByIds(ids);
     }
 
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public int assignTaskUsers(Long taskId, List<NdtTaskUser> users, String username)
     {
         accessService.checkManageTask(taskId);
         taskUserMapper.deleteNdtTaskUsersByTaskId(taskId);
         int rows = 0;
-        if (users != null)
+        if (users != null) for (NdtTaskUser user : users)
         {
-            for (NdtTaskUser user : users)
-            {
-                normalizeTaskUser(taskId, user, username);
-                rows += taskUserMapper.insertNdtTaskUser(user);
-            }
+            normalizeTaskUser(taskId, user, username);
+            rows += taskUserMapper.insertNdtTaskUser(user);
         }
-        taskMapper.updateNdtInspectionTaskStatus(taskId, NdtConstants.TASK_STATUS_ASSIGNED, username);
-        return rows > 0 ? rows : 1;
+        return Math.max(rows, 1);
     }
 
-    @Override
     public List<NdtTaskUser> selectNdtTaskUsersByTaskId(Long taskId)
     {
         accessService.checkViewTask(taskId);
         return taskUserMapper.selectNdtTaskUsersByTaskId(taskId);
     }
 
-    @Override
-    public String getOhifViewerUrl(Long taskId)
+    public NdtTaskObjectTreeVo selectObjectTree(Long taskId)
+    {
+        return selectObjectTree(taskId, null);
+    }
+
+    public NdtTaskObjectTreeVo selectObjectTree(Long taskId, Long studyId)
     {
         accessService.checkViewTask(taskId);
-        NdtInspectionTask task = taskMapper.selectNdtInspectionTaskById(taskId);
-        if (task == null || StringUtils.isEmpty(task.getStudyInstanceUid()))
+        if (studyId != null)
         {
-            throw new ServiceException("该任务尚未绑定StudyInstanceUID");
+            return selectStudyObjectTree(taskId, studyId);
         }
-        return properties.buildViewerUrl(task.getStudyInstanceUid(), taskId,
-                String.valueOf(taskId), accessService.canEvaluateTask(taskId));
+        NdtTaskObjectTreeVo tree = new NdtTaskObjectTreeVo();
+        tree.setTaskId(taskId);
+        for (NdtWorkpiece workpiece : workpieceMapper.selectByTaskId(taskId))
+        {
+            NdtTaskObjectTreeVo.WorkpieceNode workpieceNode = new NdtTaskObjectTreeVo.WorkpieceNode();
+            workpieceNode.setId(workpiece.getId());
+            workpieceNode.setWorkpieceName(workpiece.getWorkpieceName());
+            workpieceNode.setStatus(workpiece.getStatus());
+            for (NdtInspectionStudy study : studyMapper.selectByWorkpieceId(workpiece.getId()))
+            {
+                NdtTaskObjectTreeVo.StudyNode studyNode = new NdtTaskObjectTreeVo.StudyNode();
+                studyNode.setId(study.getId());
+                studyNode.setStudyInstanceUid(study.getStudyInstanceUid());
+                studyNode.setInspectionMethodCode(study.getInspectionMethodCode());
+                studyNode.setStudyDescription(study.getStudyDescription());
+                for (NdtDicomSeries series : seriesMapper.selectByStudyId(study.getId()))
+                {
+                    NdtTaskObjectTreeVo.SeriesNode seriesNode = new NdtTaskObjectTreeVo.SeriesNode();
+                    seriesNode.setId(series.getId());
+                    seriesNode.setPositionId(series.getPositionId());
+                    seriesNode.setSeriesInstanceUid(series.getSeriesInstanceUid());
+                    seriesNode.setModality(series.getModality());
+                    seriesNode.setSeriesDescription(series.getSeriesDescription());
+                    NdtDicomObject objectQuery = new NdtDicomObject();
+                    objectQuery.setSeriesId(series.getId());
+                    seriesNode.setObjects(objectMapper.selectList(objectQuery));
+                    studyNode.getSeries().add(seriesNode);
+                }
+                workpieceNode.getStudies().add(studyNode);
+            }
+            for (NdtInspectionPosition position : positionMapper.selectByWorkpieceId(workpiece.getId()))
+            {
+                NdtTaskObjectTreeVo.PositionNode positionNode = new NdtTaskObjectTreeVo.PositionNode();
+                positionNode.setId(position.getId());
+                positionNode.setPositionCode(position.getPositionCode());
+                positionNode.setPositionName(position.getPositionName());
+                positionNode.setObjects(objectMapper.selectByPositionId(position.getId()));
+                workpieceNode.getPositions().add(positionNode);
+            }
+            tree.getWorkpieces().add(workpieceNode);
+        }
+        return tree;
     }
 
-    private void validateTask(NdtInspectionTask task)
+    private NdtTaskObjectTreeVo selectStudyObjectTree(Long taskId, Long studyId)
     {
-        if (StringUtils.isEmpty(task.getTaskName()))
+        NdtInspectionStudy study = studyMapper.selectById(studyId);
+        if (study == null)
         {
-            throw new ServiceException("任务名称不能为空");
+            throw new ServiceException("检测Study不存在");
         }
-        if (task.getCustomerDeptId() == null)
+        if (!taskId.equals(study.getTaskId()))
         {
-            throw new ServiceException("客户部门不能为空");
+            throw new ServiceException("检测Study与任务不匹配");
         }
+        NdtWorkpiece workpiece = workpieceMapper.selectById(study.getWorkpieceId());
+        if (workpiece == null || !taskId.equals(workpiece.getTaskId()))
+        {
+            throw new ServiceException("检测Study所属工件不存在");
+        }
+
+        NdtTaskObjectTreeVo tree = new NdtTaskObjectTreeVo();
+        tree.setTaskId(taskId);
+        NdtTaskObjectTreeVo.WorkpieceNode workpieceNode = new NdtTaskObjectTreeVo.WorkpieceNode();
+        workpieceNode.setId(workpiece.getId());
+        workpieceNode.setWorkpieceName(workpiece.getWorkpieceName());
+        workpieceNode.setStatus(workpiece.getStatus());
+
+        NdtTaskObjectTreeVo.StudyNode studyNode = new NdtTaskObjectTreeVo.StudyNode();
+        studyNode.setId(study.getId());
+        studyNode.setStudyInstanceUid(study.getStudyInstanceUid());
+        studyNode.setInspectionMethodCode(study.getInspectionMethodCode());
+        studyNode.setStudyDescription(study.getStudyDescription());
+        for (NdtDicomSeries series : seriesMapper.selectByStudyId(study.getId()))
+        {
+            NdtTaskObjectTreeVo.SeriesNode seriesNode = new NdtTaskObjectTreeVo.SeriesNode();
+            seriesNode.setId(series.getId());
+            seriesNode.setPositionId(series.getPositionId());
+            seriesNode.setSeriesInstanceUid(series.getSeriesInstanceUid());
+            seriesNode.setModality(series.getModality());
+            seriesNode.setSeriesDescription(series.getSeriesDescription());
+            NdtDicomObject objectQuery = new NdtDicomObject();
+            objectQuery.setSeriesId(series.getId());
+            seriesNode.setObjects(objectMapper.selectList(objectQuery));
+            studyNode.getSeries().add(seriesNode);
+        }
+        workpieceNode.getStudies().add(studyNode);
+
+        for (NdtInspectionPosition position : positionMapper.selectByWorkpieceId(workpiece.getId()))
+        {
+            NdtTaskObjectTreeVo.PositionNode positionNode = new NdtTaskObjectTreeVo.PositionNode();
+            positionNode.setId(position.getId());
+            positionNode.setPositionCode(position.getPositionCode());
+            positionNode.setPositionName(position.getPositionName());
+            positionNode.setObjects(objectMapper.selectByStudyAndPosition(studyId, position.getId()));
+            workpieceNode.getPositions().add(positionNode);
+        }
+        tree.getWorkpieces().add(workpieceNode);
+        return tree;
     }
 
-    private void normalizeTaskUser(Long taskId, NdtTaskUser taskUser, String username)
+    private void validate(NdtInspectionTask task)
     {
-        if (taskUser.getUserId() == null)
-        {
-            throw new ServiceException("分配用户不能为空");
-        }
-        if (!isSupportedTaskRole(taskUser.getTaskRole()))
-        {
-            throw new ServiceException("任务角色仅支持 CREATOR、UPLOADER、EVALUATOR、VIEWER");
-        }
-        taskUser.setTaskId(taskId);
-        taskUser.setAssignedBy(username);
-        if (StringUtils.isEmpty(taskUser.getCanView()))
-        {
-            taskUser.setCanView(NdtConstants.YES);
-        }
-        if (NdtConstants.TASK_ROLE_EVALUATOR.equals(taskUser.getTaskRole()))
-        {
-            taskUser.setCanEvaluate(NdtConstants.YES);
-        }
-        if (NdtConstants.TASK_ROLE_UPLOADER.equals(taskUser.getTaskRole()))
-        {
-            taskUser.setCanUpload(NdtConstants.YES);
-        }
-        if (StringUtils.isEmpty(taskUser.getCanEvaluate()))
-        {
-            taskUser.setCanEvaluate(NdtConstants.NO);
-        }
-        if (StringUtils.isEmpty(taskUser.getCanUpload()))
-        {
-            taskUser.setCanUpload(NdtConstants.NO);
-        }
+        if (task == null || StringUtils.isEmpty(task.getTaskName())) throw new ServiceException("任务名称不能为空");
+        if (task.getCustomerId() == null) throw new ServiceException("客户不能为空");
     }
 
-    private boolean isSupportedTaskRole(String role)
+    private void normalizeTaskUser(Long taskId, NdtTaskUser user, String username)
     {
-        return NdtConstants.TASK_ROLE_CREATOR.equals(role)
-                || NdtConstants.TASK_ROLE_UPLOADER.equals(role)
-                || NdtConstants.TASK_ROLE_EVALUATOR.equals(role)
-                || NdtConstants.TASK_ROLE_VIEWER.equals(role);
+        if (user.getUserId() == null) throw new ServiceException("分配用户不能为空");
+        if (!List.of(NdtConstants.TASK_ROLE_CREATOR, NdtConstants.TASK_ROLE_UPLOADER,
+                NdtConstants.TASK_ROLE_EVALUATOR, NdtConstants.TASK_ROLE_VIEWER).contains(user.getTaskRole()))
+            throw new ServiceException("任务角色不合法");
+        user.setTaskId(taskId);
+        user.setAssignedBy(username);
+        if (StringUtils.isEmpty(user.getCanView())) user.setCanView(NdtConstants.YES);
+        if (StringUtils.isEmpty(user.getCanUpload())) user.setCanUpload(NdtConstants.NO);
+        if (StringUtils.isEmpty(user.getCanEvaluate())) user.setCanEvaluate(NdtConstants.NO);
     }
 }

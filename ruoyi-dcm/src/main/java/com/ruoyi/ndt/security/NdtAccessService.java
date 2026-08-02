@@ -35,19 +35,8 @@ public class NdtAccessService
             entity.getParams().put("scopeType", "ALL");
             return;
         }
-        if (hasRole(loginUser, NdtConstants.ROLE_INSPECTOR))
-        {
-            entity.getParams().put("scopeType", "ASSIGNED");
-            entity.getParams().put("scopeUserId", loginUser.getUserId());
-            return;
-        }
-        if (hasRole(loginUser, NdtConstants.ROLE_CUSTOMER))
-        {
-            entity.getParams().put("scopeType", "CUSTOMER_DEPT");
-            entity.getParams().put("scopeDeptId", loginUser.getDeptId());
-            return;
-        }
-        entity.getParams().put("scopeType", "NONE");
+        entity.getParams().put("scopeType", "ASSIGNED");
+        entity.getParams().put("scopeUserId", loginUser.getUserId());
     }
 
     public boolean canViewTask(Long taskId)
@@ -59,12 +48,6 @@ public class NdtAccessService
         }
         LoginUser loginUser = SecurityUtils.getLoginUser();
         if (isSuperAdmin(loginUser) || hasRole(loginUser, NdtConstants.ROLE_COMPANY_ADMIN))
-        {
-            return true;
-        }
-        if (hasRole(loginUser, NdtConstants.ROLE_CUSTOMER)
-                && task.getCustomerDeptId() != null
-                && task.getCustomerDeptId().equals(loginUser.getDeptId()))
         {
             return true;
         }
@@ -84,7 +67,7 @@ public class NdtAccessService
     public boolean canEvaluateTask(Long taskId)
     {
         LoginUser loginUser = SecurityUtils.getLoginUser();
-        if (isSuperAdmin(loginUser))
+        if (isSuperAdmin(loginUser) || hasRole(loginUser, NdtConstants.ROLE_COMPANY_ADMIN))
         {
             return true;
         }

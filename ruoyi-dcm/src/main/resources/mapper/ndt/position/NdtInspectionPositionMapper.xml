@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.position.mapper.NdtInspectionPositionMapper">
+    <resultMap id="Map" type="com.ruoyi.ndt.position.domain.NdtInspectionPosition">
+        <id property="id" column="id"/><result property="workpieceId" column="workpiece_id"/>
+        <result property="workpieceName" column="workpiece_name"/><result property="taskId" column="task_id"/>
+        <result property="positionName" column="position_name"/><result property="positionCode" column="position_code"/>
+        <result property="sortNo" column="sort_no"/><result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/><result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/><result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+    <sql id="base">select p.*,w.task_id,w.workpiece_name from ndt_inspection_position p join ndt_workpiece w on w.id=p.workpiece_id and w.del_flag='0'</sql>
+    <select id="selectList" resultMap="Map"><include refid="base"/><where>p.del_flag='0'
+        <if test="workpieceId != null">and p.workpiece_id=#{workpieceId}</if>
+        <if test="taskId != null">and w.task_id=#{taskId}</if>
+        <if test="positionName != null and positionName != ''">and p.position_name like concat('%',#{positionName},'%')</if>
+        <if test="params.scopeType == 'ASSIGNED'">and exists(select 1 from ndt_task_user tu where tu.task_id=w.task_id and tu.user_id=#{params.scopeUserId} and tu.can_view='1')</if>
+        <if test="params.scopeType == 'NONE'">and 1=0</if>
+    </where>order by p.workpiece_id,p.sort_no,p.id</select>
+    <select id="selectByWorkpieceId" resultMap="Map"><include refid="base"/> where p.workpiece_id=#{workpieceId} and p.del_flag='0' order by p.sort_no,p.id</select>
+    <select id="selectById" resultMap="Map"><include refid="base"/> where p.id=#{id} and p.del_flag='0'</select>
+    <select id="selectByIdForUpdate" resultMap="Map"><include refid="base"/> where p.id=#{id} and p.del_flag='0' for update</select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">insert into ndt_inspection_position(workpiece_id,position_name,position_code,sort_no,remark,create_by,create_time,update_by,update_time,del_flag)
+        values(#{workpieceId},#{positionName},#{positionCode},#{sortNo},#{remark},#{createBy},sysdate(),#{updateBy},sysdate(),'0')</insert>
+    <update id="update">update ndt_inspection_position set position_name=#{positionName},position_code=#{positionCode},sort_no=#{sortNo},remark=#{remark},update_by=#{updateBy},update_time=sysdate() where id=#{id} and del_flag='0'</update>
+    <update id="softDeleteByIds">update ndt_inspection_position set del_flag='2',update_time=sysdate() where id in <foreach collection="array" item="id" open="(" close=")" separator=",">#{id}</foreach></update>
+</mapper>

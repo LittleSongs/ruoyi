@@ -8,6 +8,6 @@ export function getIntegrity(id) {
   return request({ url: '/ndt/integrity/' + id, method: 'get' })
 }
 
-export function verifyIntegrity(dicomInstanceId) {
-  return request({ url: '/ndt/integrity/verify/' + dicomInstanceId, method: 'post' })
+export function verifyIntegrity(objectId) {
+  return request({ url: '/ndt/integrity/verify/' + objectId, method: 'post' })
 }

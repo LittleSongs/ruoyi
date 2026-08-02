@@ -28,6 +28,6 @@ export function assignTaskUsers(taskId, data) {
   return request({ url: '/ndt/task/' + taskId + '/users', method: 'put', data })
 }
 
-export function getTaskOhif(taskId) {
-  return request({ url: '/ndt/task/' + taskId + '/ohif', method: 'get' })
+export function getTaskObjectTree(taskId) {
+  return request({ url: '/ndt/task/' + taskId + '/object-tree', method: 'get' })
 }

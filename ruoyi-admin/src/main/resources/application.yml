@@ -7,7 +7,7 @@ ruoyi:
   # 版权年份
   copyrightYear: 2026
   # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: /Users/leo/code/RuoYi-profile
+  profile: C:/Users/china/Code/RuoYi-profile
   # 获取ip地址开关
   addressEnabled: false
   # 验证码类型 math 数字计算 char 字符验证
@@ -99,7 +99,7 @@ token:
   # 令牌密钥
   secret: abcdefghijklmnopqrstuvwxyz
   # 令牌有效期（默认30分钟）
-  expireTime: 30
+  expireTime: 1440
 
 # MyBatis配置
 mybatis:
@@ -156,7 +156,7 @@ dcm:
     viewer-url: http://localhost:3000/viewer
   validation:
     official-enabled: true
-    official-command: validate_iods
+    official-command: ${DICOM_VALIDATOR:C:/Users/china/Code/DICOM-SYS/.venv-dicom/Scripts/validate_iods.exe} --edition local
     official-timeout-seconds: 60
 
 # 无损检测 DICOM 管理配置
@@ -168,7 +168,3 @@ ndt:
     password:
   ohif:
     viewer-url: http://localhost:3000/industrial-viewer
-  security:
-    allow-anonymous-viewer-api: ${NDT_ALLOW_ANONYMOUS_VIEWER_API:false}
-    # 中科检测公司根部门ID；该部门及其子部门视为公司内部部门，其余部门按客户部门处理
-    company-root-dept-id: 100

@@ -1,479 +1,69 @@
 <template>
   <div class="app-container">
-    <el-form ref="queryRef" :model="queryParams" :inline="true" v-show="showSearch">
-      <el-form-item label="任务编号" prop="taskNo">
-        <el-input v-model="queryParams.taskNo" placeholder="请输入任务编号" clearable style="width: 180px" @keyup.enter="handleQuery" />
-      </el-form-item>
-      <el-form-item label="工件名称" prop="workpieceName">
-        <el-input v-model="queryParams.workpieceName" placeholder="请输入工件名称" clearable style="width: 180px" @keyup.enter="handleQuery" />
-      </el-form-item>
-      <el-form-item label="StudyUID" prop="studyInstanceUid">
-        <el-input v-model="queryParams.studyInstanceUid" placeholder="StudyInstanceUID" clearable style="width: 240px" @keyup.enter="handleQuery" />
-      </el-form-item>
-      <el-form-item label="SOPUID" prop="sopInstanceUid">
-        <el-input v-model="queryParams.sopInstanceUid" placeholder="SOPInstanceUID" clearable style="width: 220px" @keyup.enter="handleQuery" />
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-      </el-form-item>
+    <el-alert title="一个部位对应一个图像Series：先上传一张原始图，再从该原始图上传处理图、截图或标注图；这些派生图必须保留原图的Study UID和Series UID。SR等非图像对象由评定模块上传到独立Series。" type="info" show-icon :closable="false" />
+
+    <el-form :inline="true" style="margin-top:16px">
+      <el-form-item label="任务"><el-select v-model="taskId" filterable @change="taskChanged" style="width:260px"><el-option v-for="t in tasks" :key="t.id" :label="`${t.taskNo} - ${t.taskName}`" :value="t.id"/></el-select></el-form-item>
+      <el-form-item label="检测部位"><el-select v-model="positionId" filterable clearable @change="positionChanged" style="width:280px"><el-option v-for="p in positions" :key="p.id" :label="`${p.workpieceName} / ${p.positionCode} ${p.positionName}`" :value="p.id"/></el-select></el-form-item>
+      <el-form-item><el-button type="primary" @click="load">查询</el-button><el-upload :show-file-list="false" :http-request="doUpload" accept=".dcm,application/dicom" style="margin-left:8px"><el-button :disabled="!positionId">上传原始DICOM</el-button></el-upload></el-form-item>
     </el-form>
-
-    <el-row :gutter="10" class="mb8">
-      <el-col :span="1.5"><el-button type="success" plain icon="RefreshRight" @click="loadHierarchy" v-hasPermi="['ndt:orthanc:list']">刷新Orthanc树</el-button></el-col>
-      <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
-    </el-row>
-
-    <div class="split-layout" @mouseup="stopDragging" @mouseleave="stopDragging">
-      <div class="split-left" :style="leftPaneStyle">
-        <el-card shadow="never" class="tree-card">
-          <template #header>Orthanc归档树</template>
-          <el-tree ref="treeRef" :data="treeData" node-key="id" :props="treeProps" highlight-current default-expand-all @node-click="handleTreeClick" />
-        </el-card>
-      </div>
-
-      <div class="splitter" :class="{ dragging: isDragging }" @mousedown.prevent="startDragging">
-        <div class="splitter-handle"></div>
-      </div>
-
-      <div class="split-right" :style="rightPaneStyle">
-        <el-card shadow="never">
-          <template #header>
-            <div class="card-header">
-              <span>实例列表</span>
-            </div>
-          </template>
-          <el-table v-loading="loading" :data="dicomList">
-            <el-table-column label="任务编号" prop="taskNo" min-width="150" />
-            <el-table-column label="工件" prop="workpieceName" min-width="120" />
-            <el-table-column label="StudyUID" prop="studyInstanceUid" min-width="220" :show-overflow-tooltip="true" />
-            <el-table-column label="SeriesUID" prop="seriesInstanceUid" min-width="220" :show-overflow-tooltip="true" />
-            <el-table-column label="SOPUID" prop="sopInstanceUid" min-width="220" :show-overflow-tooltip="true" />
-            <el-table-column label="Modality" prop="modality" min-width="120" align="center" />
-            <el-table-column label="Orthanc实例" prop="orthancInstanceId" min-width="160" :show-overflow-tooltip="true" />
-            <el-table-column label="操作" width="280" align="center" fixed="right">
-              <template #default="scope">
-                <el-button link type="primary" icon="View" @click="viewInstance(scope.row)">查看</el-button>
-                <el-button link type="primary" icon="Edit" @click="openTagDialog(scope.row.id)">编辑标签</el-button>
-                <el-button link type="primary" icon="Link" @click="jumpOhif(scope.row)">OHIF</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
-        </el-card>
-
-        <el-card shadow="never" class="detail-card mt12">
-          <template #header>
-            <div class="card-header">
-              <span>归档树选中实例详情</span>
-              <el-button v-if="currentDicomId" type="primary" plain size="small" @click="openTagDialog(currentDicomId)">进入编辑</el-button>
-            </div>
-          </template>
-          <template v-if="currentDicomDetail">
-            <el-descriptions :column="2" border>
-              <el-descriptions-item label="任务编号">{{ currentDicomDetail.taskNo }}</el-descriptions-item>
-              <el-descriptions-item label="工件">{{ currentDicomDetail.workpieceName }}</el-descriptions-item>
-              <el-descriptions-item label="StudyUID">{{ currentDicomDetail.studyInstanceUid }}</el-descriptions-item>
-              <el-descriptions-item label="SeriesUID">{{ currentDicomDetail.seriesInstanceUid }}</el-descriptions-item>
-              <el-descriptions-item label="SOPUID">{{ currentDicomDetail.sopInstanceUid }}</el-descriptions-item>
-              <el-descriptions-item label="Orthanc实例">{{ currentDicomDetail.orthancInstanceId }}</el-descriptions-item>
-            </el-descriptions>
-          </template>
-          <el-empty v-else description="请选择左侧树节点或列表中的实例查看详情" />
-        </el-card>
-
-        <el-card shadow="never" class="tag-card mt12">
-          <template #header>
-            <div class="card-header">
-              <span>DICOM 标签内容</span>
-              <div class="tag-card-actions">
-                <el-input v-model="readonlyTagKeyword" placeholder="搜索显示名称 / Tag名 / 值 / 原值" clearable prefix-icon="Search" class="tag-search-input" />
-                <el-button v-if="currentDicomId" type="primary" plain icon="Refresh" @click="loadReadonlyTags(currentDicomId)">刷新</el-button>
-              </div>
-            </div>
-          </template>
-          <el-table v-if="currentDicomId" v-loading="readonlyTagLoading" :data="filteredReadonlyTagItems" max-height="520" border>
-            <el-table-column label="显示名称" min-width="160" :show-overflow-tooltip="true">
-              <template #default="scope">{{ scope.row.tagLabel || scope.row.tagName }}</template>
-            </el-table-column>
-            <el-table-column label="Tag名" prop="tagName" min-width="210" :show-overflow-tooltip="true" />
-            <el-table-column label="值" prop="value" min-width="300" :show-overflow-tooltip="true" />
-            <el-table-column label="原值" prop="originalValue" min-width="300" :show-overflow-tooltip="true" />
-            <el-table-column label="可编辑" width="100" align="center">
-              <template #default="scope">
-                <el-tag v-if="scope.row.editable" type="success">是</el-tag>
-                <el-tag v-else type="info">否</el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-empty v-else description="请选择左侧树节点或列表中的实例查看标签内容" />
-        </el-card>
-      </div>
-    </div>
-
-    <el-dialog v-model="tagDialogVisible" title="DICOM 标签管理" width="1200px" :close-on-click-modal="false">
-      <!-- <el-alert title="仅允许编辑已在“DICOM私有标签”菜单启用的标签；保存会生成修改后的DICOM并同步更新完整性校验记录。" type="warning" show-icon/> -->
-      <el-row :gutter="12">
-        <el-col :span="18">
-          <el-select v-model="selectedAddTagName" filterable clearable placeholder="请选择要新增的标签" style="width: 100%">
-            <el-option v-for="tag in tagOptions" :key="tag.tagName" :label="`${tag.tagLabel} / ${tag.tagName}`" :value="tag.tagName">
-              <span>{{ tag.tagLabel }}</span>
-              <span class="tag-option-name">{{ tag.tagName }}</span>
-            </el-option>
-          </el-select>
-        </el-col>
-        <el-col :span="6">
-          <el-button type="primary" icon="Plus" style="width: 100%" :disabled="!selectedAddTagName" @click="addConfiguredTag" v-hasPermi="['ndt:dicom:tag:add']">添加标签</el-button>
-        </el-col>
-      </el-row>
-      <br />
-      <el-table :data="tagItems" max-height="520">
-        <el-table-column label="显示名称" min-width="160">
-          <template #default="scope">
-            <el-input :model-value="scope.row.tagLabel || scope.row.tagName" disabled />
-          </template>
-        </el-table-column>
-        <el-table-column label="Tag名" min-width="210">
-          <template #default="scope">
-            <el-input v-model="scope.row.tagName" disabled />
-          </template>
-        </el-table-column>
-        <el-table-column label="值" min-width="280">
-          <template #default="scope">
-            <el-input v-model="scope.row.value" :disabled="!scope.row.editable" placeholder="请输入值" />
-          </template>
-        </el-table-column>
-        <el-table-column label="原值" min-width="280">
-          <template #default="scope">
-            <el-input :model-value="scope.row.originalValue" disabled />
-          </template>
-        </el-table-column>
-        <el-table-column label="可编辑" width="100" align="center">
-          <template #default="scope">
-            <el-tag v-if="scope.row.editable" type="success">是</el-tag>
-            <el-tag v-else type="info">否</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="100" align="center">
-          <template #default="scope">
-            <el-button link type="danger" icon="Delete" :disabled="!scope.row.editable || !scope.row.newlyAdded" @click="removeTagRow(scope.$index)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <template #footer>
-        <el-button type="primary" @click="saveTags">保存</el-button>
-        <el-button @click="tagDialogVisible = false">取消</el-button>
-      </template>
+    <el-table v-loading="loading" :data="rows">
+      <el-table-column prop="objectName" label="对象名称" min-width="180"/>
+      <el-table-column prop="positionName" label="检测部位" min-width="140"/>
+      <el-table-column prop="objectType" label="对象类型" width="165"/>
+      <el-table-column prop="storageType" label="存储" width="105"/>
+      <el-table-column prop="studyUid" label="Study UID" min-width="210" show-overflow-tooltip/>
+      <el-table-column prop="seriesUid" label="Series UID" min-width="210" show-overflow-tooltip/>
+      <el-table-column prop="sopInstanceUid" label="SOP UID" min-width="210" show-overflow-tooltip/>
+      <el-table-column prop="sha256" label="SHA-256" min-width="180" show-overflow-tooltip/>
+      <el-table-column label="操作" fixed="right" width="310"><template #default="{row}"><el-button v-if="row.objectType==='ORIGINAL_IMAGE'" link type="primary" @click="openDerivedUpload(row)">上传派生图</el-button><el-button link @click="showTags(row)">标签</el-button><el-button link @click="showRelations(row)">关系</el-button><el-button link @click="download(row)">下载</el-button><el-button link type="danger" @click="remove(row)">删除</el-button></template></el-table-column>
+    </el-table>
+    <pagination v-show="total>0" :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="load"/>
+    <el-dialog v-model="detailVisible" :title="detailTitle" width="760px">
+      <el-table :data="details" max-height="520"><el-table-column prop="tagName" label="标签" width="150"/><el-table-column prop="value" label="值" show-overflow-tooltip/><el-table-column prop="sourceObjectId" label="来源对象"/><el-table-column prop="targetObjectId" label="目标对象"/><el-table-column prop="relationType" label="关系"/></el-table>
+    </el-dialog>
+    <el-dialog v-model="derivedVisible" title="上传同Series派生图" width="560px" @closed="resetDerivedUpload">
+      <el-alert title="派生DICOM必须与来源原始图具有相同的Study Instance UID和Series Instance UID；后台不会改写文件标签。" type="warning" :closable="false" show-icon/>
+      <el-form :model="derivedForm" label-width="100px" style="margin-top:16px">
+        <el-form-item label="来源原始图"><span>{{ derivedSource?.objectName || derivedSource?.sopInstanceUid }}</span></el-form-item>
+        <el-form-item label="检测部位"><span>{{ derivedSource?.positionName }}</span></el-form-item>
+        <el-form-item label="Study UID"><span class="uid-text">{{ derivedSource?.studyUid }}</span></el-form-item>
+        <el-form-item label="Series UID"><span class="uid-text">{{ derivedSource?.seriesUid }}</span></el-form-item>
+        <el-form-item label="派生类型"><el-select v-model="derivedForm.objectType" style="width:100%"><el-option label="处理图" value="PROCESSED_IMAGE"/><el-option label="截图" value="SCREENSHOT"/><el-option label="标注图" value="ANNOTATION_IMAGE"/></el-select></el-form-item>
+        <el-form-item label="DICOM文件"><el-upload :auto-upload="false" :limit="1" :on-change="derivedFileChanged" :on-remove="derivedFileRemoved" accept=".dcm,application/dicom"><el-button>选择文件</el-button></el-upload></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="derivedVisible=false">取消</el-button><el-button type="primary" :loading="derivedUploading" @click="submitDerivedUpload">上传</el-button></template>
     </el-dialog>
   </div>
 </template>
+<script setup>
+import { onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { saveAs } from 'file-saver'
+import { listTask, getTaskObjectTree } from '@/api/ndt/task'
+import { listDicomObject, uploadDicomObject, uploadDerivedDicomObject, getObjectTags, getObjectRelations, downloadDicomObject, deleteDicomObject } from '@/api/ndt/dicom'
 
-<script setup name="NdtDicom">
-import { listDicom, getDicom, getDicomTags, getDicomTagOptions, updateDicomTag } from '@/api/ndt/dicom'
-import { getOrthancHierarchy } from '@/api/ndt/orthanc'
-import { getTaskOhif } from '@/api/ndt/task'
-import { useRoute } from 'vue-router'
-
-const route = useRoute()
-const { proxy } = getCurrentInstance()
-const loading = ref(false)
-const showSearch = ref(true)
-const dicomList = ref([])
-const total = ref(0)
-const treeData = ref([])
-const treeRef = ref()
-const currentDicomId = ref(null)
-const currentDicomDetail = ref(null)
-const tagDialogVisible = ref(false)
-const tagItems = ref([])
-const readonlyTagItems = ref([])
-const readonlyTagLoading = ref(false)
-const readonlyTagKeyword = ref('')
-const tagOptions = ref([])
-const selectedAddTagName = ref()
-const treeProps = { children: 'children', label: 'title' }
-const queryParams = reactive({ pageNum: 1, pageSize: 10, taskNo: undefined, workpieceName: undefined, studyInstanceUid: undefined, sopInstanceUid: undefined })
-const leftPaneWidth = ref(25)
-const isDragging = ref(false)
-const minLeftWidth = 18
-const maxLeftWidth = 60
-
-function getList() {
-  loading.value = true
-  listDicom(queryParams)
-    .then((res) => {
-      dicomList.value = res.rows
-      total.value = res.total
-    })
-    .finally(() => {
-      loading.value = false
-    })
-}
-function handleQuery() {
-  queryParams.pageNum = 1
-  getList()
-}
-function resetQuery() {
-  proxy.resetForm('queryRef')
-  handleQuery()
-}
-function loadHierarchy() {
-  getOrthancHierarchy(queryParams).then((res) => {
-    treeData.value = res.data || []
-  })
-}
-function extractDicomInstanceId(node) {
-  if (!node || node.nodeType !== 'INSTANCE') return null
-  return node.dicomInstanceId || node.id
-}
-const leftPaneStyle = computed(() => ({ flex: `0 0 ${leftPaneWidth.value}%`, maxWidth: `${leftPaneWidth.value}%` }))
-const rightPaneStyle = computed(() => ({ flex: `1 1 ${100 - leftPaneWidth.value}%`, minWidth: '0' }))
-const filteredReadonlyTagItems = computed(() => {
-  const keyword = readonlyTagKeyword.value.trim().toLowerCase()
-  if (!keyword) return readonlyTagItems.value
-  return readonlyTagItems.value.filter((item) =>
-    [item.tagLabel, item.tagName, item.value, item.originalValue]
-      .some((value) => String(value ?? '').toLowerCase().includes(keyword)),
-  )
-})
-function clampWidth(value) {
-  return Math.min(maxLeftWidth, Math.max(minLeftWidth, value))
-}
-function startDragging() {
-  isDragging.value = true
-  const onMouseMove = (e) => {
-    const container = document.querySelector('.split-layout')
-    if (!container) return
-    const rect = container.getBoundingClientRect()
-    const nextWidth = ((e.clientX - rect.left) / rect.width) * 100
-    leftPaneWidth.value = clampWidth(nextWidth)
-  }
-  const stop = () => {
-    isDragging.value = false
-    window.removeEventListener('mousemove', onMouseMove)
-    window.removeEventListener('mouseup', stop)
-  }
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('mouseup', stop)
-}
-function stopDragging() {
-  if (!isDragging.value) return
-  isDragging.value = false
-}
-function viewInstance(row) {
-  currentDicomId.value = row.id
-  currentDicomDetail.value = row
-  highlightTreeNode(row.id)
-  loadReadonlyTags(row.id)
-}
-function loadReadonlyTags(id) {
-  if (!id) {
-    readonlyTagItems.value = []
-    return
-  }
-  readonlyTagLoading.value = true
-  getDicomTags(id)
-    .then((res) => {
-      readonlyTagItems.value = res.data || []
-    })
-    .finally(() => {
-      readonlyTagLoading.value = false
-    })
-}
-function highlightTreeNode(dicomInstanceId) {
-  const walk = (nodes) => {
-    for (const node of nodes || []) {
-      if (String(node.dicomInstanceId || node.id) === String(dicomInstanceId)) {
-        treeRef.value?.setCurrentKey(node.id)
-        return true
-      }
-      if (walk(node.children)) return true
-    }
-    return false
-  }
-  walk(treeData.value)
-}
-function handleTreeClick(node) {
-  const id = extractDicomInstanceId(node)
-  if (id) {
-    currentDicomId.value = id
-    currentDicomDetail.value = node
-    loadReadonlyTags(id)
-    getDicom(id).then((res) => {
-      currentDicomDetail.value = res.data || currentDicomDetail.value
-    })
-  } else {
-    currentDicomId.value = null
-    currentDicomDetail.value = node
-    readonlyTagItems.value = []
-  }
-}
-function openTagDialog(id) {
-  currentDicomId.value = id
-  selectedAddTagName.value = undefined
-  Promise.all([getDicomTags(id), getDicomTagOptions(id)]).then(([tags, options]) => {
-    tagItems.value = tags.data || []
-    tagOptions.value = options.data || []
-    tagDialogVisible.value = true
-  })
-}
-function addConfiguredTag() {
-  const tag = tagOptions.value.find((item) => item.tagName === selectedAddTagName.value)
-  if (!tag) return
-  tagItems.value.push({
-    tagName: tag.tagName,
-    tagLabel: tag.tagLabel,
-    vr: tag.vr,
-    value: tag.defaultValue || '',
-    originalValue: '',
-    editable: true,
-    configured: true,
-    newlyAdded: true,
-  })
-  tagOptions.value = tagOptions.value.filter((item) => item.tagName !== tag.tagName)
-  selectedAddTagName.value = undefined
-}
-function removeTagRow(index) {
-  const removed = tagItems.value[index]
-  if (!removed?.editable || !removed?.newlyAdded) return
-  tagItems.value.splice(index, 1)
-  if (removed.configured && !tagOptions.value.some((item) => item.tagName === removed.tagName)) {
-    tagOptions.value.push({
-      tagName: removed.tagName,
-      tagLabel: removed.tagLabel || removed.tagName,
-      vr: removed.vr,
-      defaultValue: removed.value || '',
-    })
-  }
-}
-function saveTags() {
-  updateDicomTag(currentDicomId.value, tagItems.value).then(() => {
-    proxy.$modal.msgSuccess('保存成功')
-    tagDialogVisible.value = false
-    getList()
-    loadHierarchy()
-    if (currentDicomId.value) {
-      loadReadonlyTags(currentDicomId.value)
-      getDicom(currentDicomId.value).then((res) => {
-        currentDicomDetail.value = res.data || null
-      })
-    }
-  })
-}
-function jumpOhif(row) {
-  getTaskOhif(row.id).then((res) => {
-    window.open(res.data, '_blank')
-  })
-}
-function openDicomFromRoute() {
-  const dicomInstanceId = route.query.dicomInstanceId
-  if (!dicomInstanceId) return
-  const id = Number(dicomInstanceId)
-  if (Number.isNaN(id)) return
-  currentDicomId.value = id
-  loadReadonlyTags(id)
-  getDicom(id).then((res) => {
-    currentDicomDetail.value = res.data || null
-    highlightTreeNode(id)
-  })
-}
-onMounted(() => {
-  getList()
-  loadHierarchy()
-  openDicomFromRoute()
-})
-watch(
-  () => route.query.dicomInstanceId,
-  () => {
-    openDicomFromRoute()
-  },
-)
+const tasks=ref([]),positions=ref([]),taskId=ref(null),positionId=ref(null),rows=ref([]),total=ref(0),loading=ref(false)
+const query=reactive({pageNum:1,pageSize:10})
+const detailVisible=ref(false),detailTitle=ref(''),details=ref([])
+const derivedVisible=ref(false),derivedUploading=ref(false),derivedSource=ref(null),derivedFile=ref(null)
+const derivedForm=reactive({objectType:'PROCESSED_IMAGE'})
+async function loadTasks(){const r=await listTask({pageNum:1,pageSize:1000});tasks.value=r.rows}
+async function taskChanged(){positionId.value=null;positions.value=[];if(!taskId.value)return;const r=await getTaskObjectTree(taskId.value);for(const w of r.data.workpieces||[])for(const p of w.positions||[])positions.value.push({...p,workpieceName:w.workpieceName});positionChanged()}
+function positionChanged(){query.pageNum=1;load()}
+async function load(){loading.value=true;try{const r=await listDicomObject({...query,taskId:taskId.value,positionId:positionId.value});rows.value=r.rows;total.value=r.total}finally{loading.value=false}}
+async function doUpload({file}){const r=await uploadDicomObject(positionId.value,file);if(r.data.finalStatus!=='PASS')return ElMessage.error((r.data.errors||[]).join('；')||'DICOM校验失败');ElMessage.success('上传成功');load()}
+function openDerivedUpload(row){derivedSource.value=row;derivedVisible.value=true}
+function derivedFileChanged(file){derivedFile.value=file.raw}
+function derivedFileRemoved(){derivedFile.value=null}
+function resetDerivedUpload(){derivedSource.value=null;derivedFile.value=null;derivedForm.objectType='PROCESSED_IMAGE'}
+async function submitDerivedUpload(){if(!derivedFile.value)return ElMessage.warning('请选择DICOM文件');derivedUploading.value=true;try{await uploadDerivedDicomObject(derivedSource.value.id,derivedForm.objectType,derivedFile.value);ElMessage.success('派生图已归档到原图所在Series');derivedVisible.value=false;load()}finally{derivedUploading.value=false}}
+async function showTags(row){const r=await getObjectTags(row.id);detailTitle.value='DICOM标签';details.value=Object.entries(r.data||{}).map(([tagName,v])=>({tagName,value:typeof v==='object'?JSON.stringify(v):v}));detailVisible.value=true}
+async function showRelations(row){const r=await getObjectRelations(row.id);detailTitle.value='对象关系';details.value=r.data||[];detailVisible.value=true}
+async function download(row){saveAs(await downloadDicomObject(row.id),row.objectName||`object-${row.id}.dcm`)}
+async function remove(row){await ElMessageBox.confirm('确认删除该对象索引吗？Orthanc文件不会自动删除。');await deleteDicomObject(row.id);load()}
+onMounted(()=>{loadTasks();load()})
 </script>
-
 <style scoped>
-.split-layout {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  min-height: 980px;
-}
-
-.split-left,
-.split-right {
-  min-width: 0;
-}
-
-.split-left {
-  overflow: hidden;
-}
-
-.split-right {
-  overflow: hidden;
-}
-
-.splitter {
-  width: 10px;
-  cursor: col-resize;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  position: relative;
-  user-select: none;
-}
-
-.splitter::before {
-  content: '';
-  width: 1px;
-  background: #dcdfe6;
-  height: 100%;
-}
-
-.splitter-handle {
-  position: absolute;
-  top: 50%;
-  width: 6px;
-  height: 56px;
-  margin-top: -28px;
-  border-radius: 4px;
-  background: #c0c4cc;
-}
-
-.splitter:hover .splitter-handle,
-.splitter.dragging .splitter-handle {
-  background: var(--el-color-primary);
-}
-
-.tree-card {
-  min-height: 720px;
-}
-.detail-card {
-  min-height: 260px;
-}
-.tag-card {
-  min-height: 360px;
-}
-.mt12 {
-  margin-top: 12px;
-}
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.tag-card-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.tag-search-input {
-  width: 280px;
-}
-.dialog-actions {
-  margin-top: 12px;
-}
-.tag-option-name {
-  float: right;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
+.uid-text { overflow-wrap: anywhere; }
 </style>

@@ -11,7 +11,7 @@ public interface INdtIntegrityService
 
     String calculateSha256(byte[] content);
 
-    NdtDicomIntegrityRecord verifyByDicomInstanceId(Long dicomInstanceId);
+    NdtDicomIntegrityRecord verifyByObjectId(Long objectId);
 
     String signContent(String content);
 

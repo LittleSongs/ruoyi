@@ -1,126 +1,51 @@
 <template>
   <div class="app-container">
-    <el-form ref="queryRef" :model="queryParams" :inline="true" v-show="showSearch">
-      <el-form-item label="任务ID" prop="taskId"><el-input v-model="queryParams.taskId" clearable placeholder="任务ID" style="width: 120px" @keyup.enter="handleQuery" /></el-form-item>
-      <el-form-item label="SOP UID" prop="sopInstanceUid"><el-input v-model="queryParams.sopInstanceUid" clearable placeholder="SOPInstanceUID" style="width: 240px" @keyup.enter="handleQuery" /></el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" clearable placeholder="状态" style="width: 130px">
-          <el-option v-for="dict in ndt_evaluation_status" :key="dict.value" :label="dict.label" :value="dict.value" />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
-
-    <el-row :gutter="10" class="mb8">
-      <el-col :span="1.5"><el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['ndt:evaluation:add']">新增</el-button></el-col>
-      <el-col :span="1.5"><el-button type="success" plain icon="Edit" :disabled="single" @click="handleUpdate()" v-hasPermi="['ndt:evaluation:edit']">修改</el-button></el-col>
-      <el-col :span="1.5"><el-button type="danger" plain icon="Delete" :disabled="multiple" @click="handleDelete()" v-hasPermi="['ndt:evaluation:remove']">删除</el-button></el-col>
-      <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
-    </el-row>
-
-    <el-table v-loading="loading" :data="evaluationList" @selection-change="handleSelectionChange">
-      <el-table-column type="selection" width="50" align="center" />
-      <el-table-column label="任务ID" prop="taskId" width="90" align="center" />
-      <el-table-column label="任务编号" prop="taskNo" min-width="140" :show-overflow-tooltip="true" />
-      <el-table-column label="SOPInstanceUID" prop="sopInstanceUID" min-width="240" :show-overflow-tooltip="true" />
-      <el-table-column label="缺陷类型" prop="defectType" min-width="120" />
-      <el-table-column label="缺陷等级" prop="defectLevel" width="100" align="center" />
-      <el-table-column label="结论" prop="conclusion" min-width="180" :show-overflow-tooltip="true" />
-      <el-table-column label="评定人员" prop="evaluatorUserName" width="110" />
-      <el-table-column label="评定时间" prop="evaluateTime" width="160" align="center"><template #default="scope">{{ parseTime(scope.row.evaluateTime) || '-' }}</template></el-table-column>
-      <el-table-column label="状态" prop="status" width="100" align="center"><template #default="scope"><dict-tag :options="ndt_evaluation_status" :value="scope.row.status" /></template></el-table-column>
-      <el-table-column label="操作" width="190" align="center" fixed="right">
-        <template #default="scope">
-          <el-button link type="primary" icon="Document" @click="viewAnnotation(scope.row)">标注</el-button>
-          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['ndt:evaluation:edit']">修改</el-button>
-          <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['ndt:evaluation:remove']">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
-
-    <el-dialog :title="title" v-model="open" width="760px" append-to-body>
-      <el-form ref="evaluationRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item label="检测任务" prop="taskId">
-          <el-select v-model="form.taskId" filterable placeholder="请选择任务" style="width: 100%" @change="loadDicoms">
-            <el-option v-for="task in taskOptions" :key="task.id" :label="task.taskNo + ' / ' + task.taskName" :value="task.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="DICOM实例">
-          <el-select v-model="selectedDicomId" filterable clearable placeholder="可选择任务下实例" style="width: 100%" @change="selectDicom">
-            <el-option v-for="dicom in dicomOptions" :key="dicom.id" :label="dicom.instanceNumber + ' / ' + dicom.sopInstanceUid" :value="dicom.id" />
-          </el-select>
-        </el-form-item>
-        <el-row :gutter="16">
-          <el-col :span="12"><el-form-item label="缺陷类型"><el-input v-model="form.defectType" /></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="缺陷等级"><el-input v-model="form.defectLevel" /></el-form-item></el-col>
-        </el-row>
-        <el-form-item label="结论"><el-input v-model="form.conclusion" type="textarea" :rows="3" /></el-form-item>
-        <el-form-item label="标注JSON"><el-input v-model="form.annotationJson" type="textarea" :rows="5" /></el-form-item>
-        <el-form-item label="状态"><el-radio-group v-model="form.status"><el-radio v-for="dict in ndt_evaluation_status" :key="dict.value" :value="dict.value">{{ dict.label }}</el-radio></el-radio-group></el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button type="primary" @click="submitForm">保 存</el-button>
-        <el-button @click="cancel">取 消</el-button>
-      </template>
-    </el-dialog>
+    <el-form :inline="true"><el-form-item label="任务"><el-select v-model="taskId" filterable @change="reload" style="width:300px"><el-option v-for="t in tasks" :key="t.id" :label="`${t.taskNo} - ${t.taskName}`" :value="t.id"/></el-select></el-form-item></el-form>
+    <el-tabs v-model="tab">
+      <el-tab-pane label="缺陷" name="defects">
+        <el-button type="primary" :disabled="!taskId" @click="openDefect()">新增缺陷</el-button>
+        <el-table :data="defects" style="margin-top:12px"><el-table-column prop="defectNo" label="缺陷编号" width="140"/><el-table-column prop="defectType" label="缺陷类型" width="150"/><el-table-column prop="roiType" label="ROI类型" width="120"/><el-table-column prop="originalObjectId" label="原始对象ID" width="120"/><el-table-column prop="description" label="描述"/><el-table-column label="操作" width="140"><template #default="{row}"><el-button link @click="openDefect(row)">编辑</el-button><el-button link type="danger" @click="removeDefect(row)">删除</el-button></template></el-table-column></el-table>
+      </el-tab-pane>
+      <el-tab-pane label="评定与复核" name="evaluations">
+        <el-button type="primary" :disabled="!taskId" @click="openEvaluation()">新增评定</el-button>
+        <el-table :data="evaluations" style="margin-top:12px"><el-table-column prop="evaluationType" label="类型" width="120"/><el-table-column prop="defectNo" label="缺陷" width="120"/><el-table-column prop="workpieceName" label="工件" width="150"/><el-table-column prop="level" label="等级" width="100"/><el-table-column prop="conclusion" label="结论"/><el-table-column prop="status" label="状态" width="110"/><el-table-column prop="evaluatorName" label="评定人" width="120"/><el-table-column label="操作" width="340"><template #default="{row}"><el-button link :disabled="row.status!=='DRAFT'" @click="openEvaluation(row)">编辑</el-button><el-button link type="success" :disabled="row.status!=='DRAFT'" @click="submit(row)">直接提交</el-button><el-button link type="primary" :disabled="row.status!=='DRAFT'" @click="openSrSubmit(row)">提交并上传SR</el-button><el-button link @click="openReviews(row)">复核记录</el-button><el-button link type="danger" :disabled="row.status!=='DRAFT'" @click="removeEvaluation(row)">删除</el-button></template></el-table-column></el-table>
+      </el-tab-pane>
+    </el-tabs>
+    <el-dialog v-model="defectVisible" :title="defectForm.id?'编辑缺陷':'新增缺陷'" width="620px"><el-form :model="defectForm" label-width="100px"><el-form-item label="原始图对象"><el-select v-model="defectForm.originalObjectId" filterable :disabled="!!defectForm.id" style="width:100%"><el-option v-for="o in originals" :key="o.id" :label="`${o.id} - ${o.objectName||o.sopInstanceUid}`" :value="o.id"/></el-select></el-form-item><el-form-item label="缺陷编号"><el-input v-model="defectForm.defectNo"/></el-form-item><el-form-item label="缺陷类型"><el-input v-model="defectForm.defectType"/></el-form-item><el-form-item label="ROI类型"><el-input v-model="defectForm.roiType" placeholder="RECTANGLE / ELLIPSE / POLYLINE"/></el-form-item><el-form-item label="ROI JSON"><el-input v-model="defectForm.roiDataJson" type="textarea" :rows="5"/></el-form-item><el-form-item label="描述"><el-input v-model="defectForm.description" type="textarea"/></el-form-item></el-form><template #footer><el-button @click="defectVisible=false">取消</el-button><el-button type="primary" @click="saveDefect">保存</el-button></template></el-dialog>
+    <el-dialog v-model="evaluationVisible" :title="evaluationForm.id?'编辑评定':'新增评定'" width="560px"><el-form :model="evaluationForm" label-width="100px"><el-form-item label="评定类型"><el-radio-group v-model="evaluationForm.evaluationType" :disabled="!!evaluationForm.id"><el-radio value="DEFECT">缺陷</el-radio><el-radio value="WORKPIECE">工件</el-radio></el-radio-group></el-form-item><el-form-item v-if="evaluationForm.evaluationType==='DEFECT'" label="缺陷"><el-select v-model="evaluationForm.defectId" :disabled="!!evaluationForm.id" style="width:100%"><el-option v-for="d in defects" :key="d.id" :label="`${d.defectNo} ${d.defectType||''}`" :value="d.id"/></el-select></el-form-item><el-form-item v-else label="工件"><el-select v-model="evaluationForm.workpieceId" :disabled="!!evaluationForm.id" style="width:100%"><el-option v-for="w in workpieces" :key="w.id" :label="w.workpieceName" :value="w.id"/></el-select></el-form-item><el-form-item label="等级"><el-input v-model="evaluationForm.level"/></el-form-item><el-form-item label="结论"><el-input v-model="evaluationForm.conclusion"/></el-form-item><el-form-item label="说明"><el-input v-model="evaluationForm.description" type="textarea"/></el-form-item></el-form><template #footer><el-button @click="evaluationVisible=false">取消</el-button><el-button type="primary" @click="saveEvaluation">保存</el-button></template></el-dialog>
+    <el-dialog v-model="reviewVisible" title="追加复核" width="650px"><el-table :data="reviews"><el-table-column prop="reviewResult" label="结果" width="100"/><el-table-column prop="reviewComment" label="意见"/><el-table-column prop="reviewerName" label="复核人" width="120"/><el-table-column prop="reviewTime" label="时间" width="170"/></el-table><el-divider/><el-form :model="reviewForm" label-width="90px"><el-form-item label="复核结果"><el-radio-group v-model="reviewForm.reviewResult"><el-radio value="PASS">PASS</el-radio><el-radio value="REJECT">REJECT</el-radio></el-radio-group></el-form-item><el-form-item label="复核意见"><el-input v-model="reviewForm.reviewComment" type="textarea"/></el-form-item></el-form><template #footer><el-button @click="reviewVisible=false">关闭</el-button><el-button type="primary" @click="saveReview">追加复核</el-button></template></el-dialog>
+    <el-dialog v-model="srVisible" title="提交评定并归档DICOM SR" width="600px" @closed="resetSrSubmit"><el-alert title="SR会作为独立Series归档，并通过GENERATED_FROM关系关联来源原始图；后台不会改写SR文件标签。" type="info" :closable="false" show-icon/><el-form label-width="110px" style="margin-top:16px"><el-form-item label="来源原始图"><el-select v-model="srSourceObjectId" filterable style="width:100%"><el-option v-for="o in originals" :key="o.id" :label="`${o.id} - ${o.objectName||o.sopInstanceUid}`" :value="o.id"/></el-select></el-form-item><el-form-item label="DICOM SR"><el-upload :auto-upload="false" :limit="1" :on-change="srFileChanged" :on-remove="srFileRemoved" accept=".dcm,application/dicom"><el-button>选择SR文件</el-button></el-upload></el-form-item></el-form><template #footer><el-button @click="srVisible=false">取消</el-button><el-button type="primary" :loading="srSubmitting" @click="submitWithSr">提交并归档</el-button></template></el-dialog>
   </div>
 </template>
-
-<script setup name="NdtEvaluation">
-import { listEvaluation, getEvaluation, addEvaluation, updateEvaluation, delEvaluation } from "@/api/ndt/evaluation"
-import { listTask } from "@/api/ndt/task"
-import { listDicom } from "@/api/ndt/dicom"
-
-const { proxy } = getCurrentInstance()
-const { ndt_evaluation_status } = useDict("ndt_evaluation_status")
-const loading = ref(true)
-const showSearch = ref(true)
-const evaluationList = ref([])
-const taskOptions = ref([])
-const dicomOptions = ref([])
-const selectedDicomId = ref()
-const total = ref(0)
-const ids = ref([])
-const single = ref(true)
-const multiple = ref(true)
-const open = ref(false)
-const title = ref("")
-const queryParams = reactive({ pageNum: 1, pageSize: 10, taskId: undefined, sopInstanceUid: undefined, status: undefined })
-const form = ref({})
-const rules = { taskId: [{ required: true, message: "检测任务不能为空", trigger: "change" }] }
-
-function getList() { loading.value = true; listEvaluation(queryParams).then(res => { evaluationList.value = res.rows; total.value = res.total }).finally(() => { loading.value = false }) }
-function loadTasks() { listTask({ pageNum: 1, pageSize: 300 }).then(res => { taskOptions.value = res.rows }) }
-function loadDicoms() { if (!form.value.taskId) return; listDicom({ pageNum: 1, pageSize: 500, taskId: form.value.taskId }).then(res => { dicomOptions.value = res.rows }) }
-function selectDicom(id) {
-  const dicom = dicomOptions.value.find(item => item.id === id)
-  if (!dicom) return
-  form.value.studyInstanceUid = dicom.studyInstanceUid
-  form.value.seriesInstanceUid = dicom.seriesInstanceUid
-  form.value.sopInstanceUid = dicom.sopInstanceUid
-}
-function handleQuery() { queryParams.pageNum = 1; getList() }
-function resetQuery() { proxy.resetForm("queryRef"); handleQuery() }
-function reset() { selectedDicomId.value = undefined; dicomOptions.value = []; form.value = { id: undefined, taskId: undefined, studyInstanceUid: undefined, seriesInstanceUid: undefined, sopInstanceUid: undefined, defectType: undefined, defectLevel: undefined, conclusion: undefined, annotationJson: undefined, status: "DRAFT" }; proxy.resetForm("evaluationRef") }
-function handleAdd() { reset(); title.value = "新增评定结果"; open.value = true }
-function handleUpdate(row) { reset(); const id = row ? row.id : ids.value[0]; getEvaluation(id).then(res => { form.value = res.data; title.value = "修改评定结果"; open.value = true; loadDicoms() }) }
-function submitForm() {
-  proxy.$refs.evaluationRef.validate(valid => {
-    if (!valid) return
-    const request = form.value.id ? updateEvaluation(form.value) : addEvaluation(form.value)
-    request.then(() => { proxy.$modal.msgSuccess("保存成功"); open.value = false; getList() })
-  })
-}
-function cancel() { open.value = false; reset() }
-function handleSelectionChange(selection) { ids.value = selection.map(item => item.id); single.value = selection.length !== 1; multiple.value = !selection.length }
-function handleDelete(row) {
-  const deleteIds = row ? row.id : ids.value
-  proxy.$modal.confirm('是否确认删除评定结果编号为 "' + deleteIds + '" 的数据项？').then(() => delEvaluation(deleteIds)).then(() => { getList(); proxy.$modal.msgSuccess("删除成功") }).catch(() => {})
-}
-function viewAnnotation(row) { proxy.$alert(row.annotationJson || "{}", "标注JSON", { confirmButtonText: "确定" }) }
-onMounted(() => { loadTasks(); getList() })
+<script setup>
+import { onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { listTask } from '@/api/ndt/task'
+import { listWorkpiece } from '@/api/ndt/workpiece'
+import { listDicomObject } from '@/api/ndt/dicom'
+import { listDefect, addDefect, updateDefect, delDefect } from '@/api/ndt/defect'
+import { listEvaluation, addEvaluation, updateEvaluation, delEvaluation, submitEvaluation, submitEvaluationWithSr } from '@/api/ndt/evaluation'
+import { listEvaluationReview, addEvaluationReview } from '@/api/ndt/evaluationReview'
+const tab=ref('defects'),taskId=ref(null),tasks=ref([]),workpieces=ref([]),originals=ref([]),defects=ref([]),evaluations=ref([])
+const defectVisible=ref(false),defectForm=reactive({id:null,originalObjectId:null,defectNo:'',defectType:'',roiType:'',roiDataJson:'',description:''})
+const evaluationVisible=ref(false),evaluationForm=reactive({id:null,evaluationType:'DEFECT',defectId:null,workpieceId:null,level:'',conclusion:'',description:''})
+const reviewVisible=ref(false),reviews=ref([]),reviewForm=reactive({evaluationId:null,reviewResult:'PASS',reviewComment:''})
+const srVisible=ref(false),srSubmitting=ref(false),srEvaluation=ref(null),srSourceObjectId=ref(null),srFile=ref(null)
+async function loadTasks(){const r=await listTask({pageNum:1,pageSize:1000});tasks.value=r.rows}
+async function reload(){if(!taskId.value)return;const [w,o,d,e]=await Promise.all([listWorkpiece({pageNum:1,pageSize:1000,taskId:taskId.value}),listDicomObject({pageNum:1,pageSize:1000,taskId:taskId.value,objectType:'ORIGINAL_IMAGE'}),listDefect({pageNum:1,pageSize:1000,taskId:taskId.value}),listEvaluation({pageNum:1,pageSize:1000,taskId:taskId.value})]);workpieces.value=w.rows;originals.value=o.rows;defects.value=d.rows;evaluations.value=e.rows}
+function openDefect(row){Object.assign(defectForm,{id:null,originalObjectId:null,defectNo:'',defectType:'',roiType:'',roiDataJson:'',description:''},row||{});defectVisible.value=true}
+async function saveDefect(){if(!defectForm.originalObjectId||!defectForm.defectNo)return ElMessage.warning('请选择原始图并填写缺陷编号');try{if(defectForm.roiDataJson)JSON.parse(defectForm.roiDataJson)}catch{return ElMessage.error('ROI JSON格式错误')}await(defectForm.id?updateDefect(defectForm):addDefect(defectForm));defectVisible.value=false;reload()}
+async function removeDefect(row){await ElMessageBox.confirm('确认删除该缺陷吗？');await delDefect(row.id);reload()}
+function openEvaluation(row){Object.assign(evaluationForm,{id:null,evaluationType:'DEFECT',defectId:null,workpieceId:null,level:'',conclusion:'',description:''},row||{});evaluationVisible.value=true}
+async function saveEvaluation(){if(evaluationForm.evaluationType==='DEFECT')evaluationForm.workpieceId=null;else evaluationForm.defectId=null;await(evaluationForm.id?updateEvaluation(evaluationForm):addEvaluation(evaluationForm));evaluationVisible.value=false;reload()}
+async function submit(row){await ElMessageBox.confirm('提交后评定不可修改，确认提交？');await submitEvaluation(row.id);reload()}
+function openSrSubmit(row){srEvaluation.value=row;srVisible.value=true}
+function srFileChanged(file){srFile.value=file.raw}
+function srFileRemoved(){srFile.value=null}
+function resetSrSubmit(){srEvaluation.value=null;srSourceObjectId.value=null;srFile.value=null}
+async function submitWithSr(){if(!srSourceObjectId.value||!srFile.value)return ElMessage.warning('请选择来源原始图和SR文件');srSubmitting.value=true;try{await submitEvaluationWithSr(srEvaluation.value.id,srSourceObjectId.value,srFile.value);ElMessage.success('评定已提交，SR已归档到独立Series');srVisible.value=false;reload()}finally{srSubmitting.value=false}}
+async function removeEvaluation(row){await delEvaluation(row.id);reload()}
+async function openReviews(row){const r=await listEvaluationReview(row.id);reviews.value=r.data||[];Object.assign(reviewForm,{evaluationId:row.id,reviewResult:'PASS',reviewComment:''});reviewVisible.value=true}
+async function saveReview(){await addEvaluationReview(reviewForm);ElMessage.success('复核记录已追加');await openReviews({id:reviewForm.evaluationId})}
+onMounted(loadTasks)
 </script>
