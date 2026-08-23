@@ -4,6 +4,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
@@ -30,6 +31,13 @@ public class NdtInspectionStudyController extends BaseController
     @PreAuthorize("@ss.hasPermi('ndt:task:query')")
     @GetMapping("/{id}")
     public AjaxResult get(@PathVariable Long id) { return success(service.selectById(id)); }
+
+    @PreAuthorize("@ss.hasPermi('ndt:task:ohif')")
+    @GetMapping("/viewer-context")
+    public AjaxResult viewerContext(@RequestParam String studyInstanceUid)
+    {
+        return success(service.getViewerContextByStudyInstanceUid(studyInstanceUid));
+    }
 
     @PreAuthorize("@ss.hasPermi('ndt:task:ohif')")
     @GetMapping("/{id}/ohif")

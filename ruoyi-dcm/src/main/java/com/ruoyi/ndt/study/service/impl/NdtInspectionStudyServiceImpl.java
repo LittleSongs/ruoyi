@@ -8,6 +8,7 @@ import com.ruoyi.ndt.security.NdtAccessService;
 import com.ruoyi.ndt.study.domain.NdtInspectionStudy;
 import com.ruoyi.ndt.study.mapper.NdtInspectionStudyMapper;
 import com.ruoyi.ndt.study.service.INdtInspectionStudyService;
+import com.ruoyi.ndt.study.vo.NdtStudyViewerContextVo;
 
 @Service
 public class NdtInspectionStudyServiceImpl implements INdtInspectionStudyService
@@ -41,6 +42,15 @@ public class NdtInspectionStudyServiceImpl implements INdtInspectionStudyService
     {
         NdtInspectionStudy study = selectById(id);
         return properties.buildViewerUrl(study.getStudyInstanceUid(), study.getTaskId(), study.getId(),
+                access.canEvaluateTask(study.getTaskId()));
+    }
+
+    public NdtStudyViewerContextVo getViewerContextByStudyInstanceUid(String studyInstanceUid)
+    {
+        NdtInspectionStudy study = mapper.selectByStudyInstanceUid(studyInstanceUid);
+        if (study == null) throw new ServiceException("检测Study不存在");
+        access.checkViewTask(study.getTaskId());
+        return new NdtStudyViewerContextVo(study.getTaskId(), study.getId(),
                 access.canEvaluateTask(study.getTaskId()));
     }
 
