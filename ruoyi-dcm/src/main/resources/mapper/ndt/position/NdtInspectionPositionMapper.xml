@@ -15,6 +15,9 @@
         <if test="workpieceId != null">and p.workpiece_id=#{workpieceId}</if>
         <if test="taskId != null">and w.task_id=#{taskId}</if>
         <if test="positionName != null and positionName != ''">and p.position_name like concat('%',#{positionName},'%')</if>
+        <if test="params.scopeType == 'CUSTOMER'">and exists(select 1 from ndt_inspection_task ct
+            join ndt_customer cc on cc.id=ct.customer_id and cc.del_flag='0'
+            where ct.id=w.task_id and ct.customer_id=#{params.scopeCustomerId} and ct.del_flag='0')</if>
         <if test="params.scopeType == 'ASSIGNED'">and exists(select 1 from ndt_task_user tu where tu.task_id=w.task_id and tu.user_id=#{params.scopeUserId} and tu.can_view='1')</if>
         <if test="params.scopeType == 'NONE'">and 1=0</if>
     </where>order by p.workpiece_id,p.sort_no,p.id</select>

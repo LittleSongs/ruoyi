@@ -25,6 +25,14 @@
     <select id="selectById" resultMap="CustomerMap">
         select * from ndt_customer where id=#{id} and del_flag='0'
     </select>
+    <select id="selectByIdForUpdate" resultMap="CustomerMap">
+        select * from ndt_customer where id=#{id} and del_flag='0' for update
+    </select>
+    <select id="countReferences" resultType="int">
+        select (select count(*) from ndt_inspection_task where customer_id=#{id} and del_flag='0')
+            + (select count(*) from ndt_customer_user b join sys_user u on u.user_id=b.user_id
+                where b.customer_id=#{id} and u.del_flag='0')
+    </select>
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into ndt_customer(name,contact_name,contact_phone,remark,create_by,create_time,update_by,update_time,del_flag)
         values(#{name},#{contactName},#{contactPhone},#{remark},#{createBy},sysdate(),#{updateBy},sysdate(),'0')

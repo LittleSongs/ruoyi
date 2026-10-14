@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.ndt.customer.mapper.NdtCustomerAccountMapper">
+    <select id="selectList" resultType="com.ruoyi.ndt.customer.domain.NdtCustomerAccount">
+        select u.user_id userId,b.customer_id customerId,u.user_name userName,u.nick_name nickName,
+            u.phonenumber,u.email,u.status,u.remark,u.create_time createTime
+        from ndt_customer_user b join sys_user u on u.user_id=b.user_id and u.del_flag='0'
+        where b.customer_id=#{customerId} order by u.user_id desc
+    </select>
+    <!-- Keep the binding even for a deleted/disabled account, to prevent stale sessions gaining internal access. -->
+    <select id="selectBindingCustomerId" resultType="java.lang.Long">
+        select customer_id from ndt_customer_user where user_id=#{userId}
+    </select>
+    <select id="selectActiveCustomerId" resultType="java.lang.Long">
+        select b.customer_id from ndt_customer_user b
+        join sys_user u on u.user_id=b.user_id and u.del_flag='0' and u.status='0'
+        join ndt_customer c on c.id=b.customer_id and c.del_flag='0'
+        where b.user_id=#{userId} and exists(select 1 from sys_user_role ur
+            join sys_role r on r.role_id=ur.role_id and r.role_key='ndt_customer'
+                and r.status='0' and r.del_flag='0' where ur.user_id=b.user_id)
+    </select>
+    <select id="hasCustomerRole" resultType="boolean">
+        select exists(select 1 from sys_user_role ur join sys_role r on r.role_id=ur.role_id
+            where ur.user_id=#{userId} and r.role_key='ndt_customer' and r.del_flag='0')
+    </select>
+    <insert id="insert">
+        insert into ndt_customer_user(user_id,customer_id,create_by,create_time)
+        values(#{userId},#{customerId},#{createBy},sysdate())
+    </insert>
+</mapper>

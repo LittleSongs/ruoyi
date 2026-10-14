@@ -46,6 +46,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="sopInstanceUid != null and sopInstanceUid != ''">and r.sop_instance_uid like concat('%', #{sopInstanceUid}, '%')</if>
             <if test="orthancInstanceId != null and orthancInstanceId != ''">and r.orthanc_instance_id = #{orthancInstanceId}</if>
             <if test="verifyStatus != null and verifyStatus != ''">and r.verify_status = #{verifyStatus}</if>
+            <if test="params.scopeType == 'CUSTOMER'">
+                and exists(select 1 from ndt_inspection_task ct
+                    join ndt_customer cc on cc.id=ct.customer_id and cc.del_flag='0'
+                    where ct.id=w.task_id and ct.customer_id=#{params.scopeCustomerId} and ct.del_flag='0')
+            </if>
             <if test="params.scopeType == 'ASSIGNED'">
                 and exists (
                     select 1 from ndt_task_user tu

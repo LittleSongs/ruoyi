@@ -5,6 +5,13 @@ public class NdtStudyViewerContextVo
     private Long taskId;
     private Long studyId;
     private Boolean canEvaluate;
+    private Boolean customer;
+    public Boolean getCustomer() { return customer; }
+    public void setCustomer(Boolean customer) { this.customer = customer; }
+    public Boolean getCanView() { return true; }
+    public Boolean getCanUseLocalTools() { return true; }
+    public Boolean getCanCreateSR() { return canEvaluate; }
+    public Boolean getCanCreateReport() { return false; }
 
     public NdtStudyViewerContextVo(Long taskId, Long studyId, Boolean canEvaluate)
     {

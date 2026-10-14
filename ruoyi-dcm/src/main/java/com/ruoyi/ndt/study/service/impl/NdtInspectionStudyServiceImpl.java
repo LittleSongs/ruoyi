@@ -50,8 +50,10 @@ public class NdtInspectionStudyServiceImpl implements INdtInspectionStudyService
         NdtInspectionStudy study = mapper.selectByStudyInstanceUid(studyInstanceUid);
         if (study == null) throw new ServiceException("检测Study不存在");
         access.checkViewTask(study.getTaskId());
-        return new NdtStudyViewerContextVo(study.getTaskId(), study.getId(),
+        NdtStudyViewerContextVo context = new NdtStudyViewerContextVo(study.getTaskId(), study.getId(),
                 access.canEvaluateTask(study.getTaskId()));
+        context.setCustomer(access.isCustomerAccount());
+        return context;
     }
 
     private NdtInspectionStudy require(Long id)

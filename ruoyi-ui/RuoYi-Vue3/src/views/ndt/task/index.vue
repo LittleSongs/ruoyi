@@ -3,13 +3,13 @@
     <el-form :inline="true" :model="query">
       <el-form-item label="任务编号"><el-input v-model="query.taskNo" clearable /></el-form-item>
       <el-form-item label="任务名称"><el-input v-model="query.taskName" clearable /></el-form-item>
-      <el-form-item label="客户"><el-select v-model="query.customerId" clearable filterable style="width:200px"><el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id"/></el-select></el-form-item>
+      <el-form-item label="客户公司"><el-select v-model="query.customerId" clearable filterable style="width:200px"><el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id"/></el-select></el-form-item>
       <el-form-item><el-button type="primary" @click="load">查询</el-button><el-button @click="openTask()">新增任务</el-button></el-form-item>
     </el-form>
     <el-table v-loading="loading" :data="rows">
       <el-table-column prop="taskNo" label="任务编号" width="170" />
       <el-table-column prop="taskName" label="任务名称" min-width="180" />
-      <el-table-column prop="customerName" label="客户" min-width="150" />
+      <el-table-column prop="customerName" label="客户公司" min-width="150" />
       <el-table-column label="状态" width="120"><template #default="{row}">{{ taskStatusLabel(row.status) }}</template></el-table-column>
       <el-table-column prop="startTime" label="开始时间" width="165" />
       <el-table-column label="操作" width="340">
@@ -27,7 +27,7 @@
       <el-form ref="taskRef" :model="taskForm" :rules="taskRules" label-width="90px">
         <el-form-item label="任务编号"><el-input v-model="taskForm.taskNo" placeholder="留空自动生成" :disabled="!!taskForm.id"/></el-form-item>
         <el-form-item label="任务名称" prop="taskName"><el-input v-model="taskForm.taskName"/></el-form-item>
-        <el-form-item label="客户" prop="customerId"><el-select v-model="taskForm.customerId" filterable style="width:100%"><el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id"/></el-select></el-form-item>
+        <el-form-item label="客户公司" prop="customerId"><el-select v-model="taskForm.customerId" filterable style="width:100%"><el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id"/></el-select></el-form-item>
         <el-form-item label="状态"><el-select v-model="taskForm.status"><el-option v-for="s in taskStatuses" :key="s.value" :label="s.label" :value="s.value"/></el-select></el-form-item>
         <el-form-item label="起止时间"><el-date-picker v-model="taskRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" style="width:100%"/></el-form-item>
         <el-form-item label="任务说明"><el-input v-model="taskForm.description" type="textarea" :rows="3"/></el-form-item>
@@ -228,7 +228,7 @@ const workpieceStatusType=status=>({PENDING:'warning',IN_PROGRESS:'primary',COMP
 const rows=ref([]),total=ref(0),loading=ref(false),customers=ref([]),users=ref([])
 const query=reactive({pageNum:1,pageSize:10,taskNo:'',taskName:'',customerId:null})
 const taskVisible=ref(false),taskRef=ref(),taskRange=ref([]),taskForm=reactive({id:null,taskNo:'',taskName:'',customerId:null,status:'DRAFT',description:'',startTime:null,finishTime:null})
-const taskRules={taskName:[{required:true,message:'请输入任务名称'}],customerId:[{required:true,message:'请选择客户'}]}
+const taskRules={taskName:[{required:true,message:'请输入任务名称'}],customerId:[{required:true,message:'请选择客户公司'}]}
 const hierarchyVisible=ref(false),hierarchyLoading=ref(false),positionLoading=ref(false),currentTask=reactive({}),workpieces=ref([]),positions=ref([]),studies=ref([]),selectedWorkpiece=reactive({})
 const workpieceVisible=ref(false),workpieceForm=reactive({id:null,taskId:null,workpieceName:'',status:'PENDING',sortNo:0,remark:''})
 const positionVisible=ref(false),positionForm=reactive({id:null,workpieceId:null,positionCode:'',positionName:'',sortNo:0,remark:''})

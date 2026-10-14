@@ -37,6 +37,8 @@ public class NdtInspectionTaskServiceImpl implements INdtInspectionTaskService
     private final NdtDicomSeriesMapper seriesMapper;
     private final NdtDicomObjectMapper objectMapper;
     private final NdtAccessService accessService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ruoyi.ndt.customer.mapper.NdtCustomerMapper customerMapper;
 
     public NdtInspectionTaskServiceImpl(NdtInspectionTaskMapper taskMapper, NdtTaskUserMapper taskUserMapper,
             NdtWorkpieceMapper workpieceMapper, NdtInspectionPositionMapper positionMapper,
@@ -91,6 +93,7 @@ public class NdtInspectionTaskServiceImpl implements INdtInspectionTaskService
         return rows;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public int updateNdtInspectionTask(NdtInspectionTask task, String username)
     {
         accessService.checkManageTask(task.getId());
@@ -241,7 +244,9 @@ public class NdtInspectionTaskServiceImpl implements INdtInspectionTaskService
     private void validate(NdtInspectionTask task)
     {
         if (task == null || StringUtils.isEmpty(task.getTaskName())) throw new ServiceException("任务名称不能为空");
-        if (task.getCustomerId() == null) throw new ServiceException("客户不能为空");
+        if (task.getCustomerId() == null) throw new ServiceException("客户公司不能为空");
+        if (customerMapper.selectByIdForUpdate(task.getCustomerId()) == null)
+            throw new ServiceException("客户公司不存在或已删除");
     }
 
     private void normalizeTaskUser(Long taskId, NdtTaskUser user, String username)

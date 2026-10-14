@@ -72,7 +72,7 @@ public class NdtProperties
             builder.append("&canEvaluate=").append(canEvaluate);
         }
         builder.append("&ruoyiApiBase=")
-                .append(URLEncoder.encode("http://localhost:3000", StandardCharsets.UTF_8));
+                .append(URLEncoder.encode(ohif.getApiBase(), StandardCharsets.UTF_8));
         return builder.toString();
     }
 
@@ -122,6 +122,9 @@ public class NdtProperties
 
     public static class Ohif
     {
+        private String apiBase = "/ndt-api";
+        public String getApiBase() { return apiBase; }
+        public void setApiBase(String apiBase) { this.apiBase = apiBase; }
         private String viewerUrl;
 
         public String getViewerUrl()

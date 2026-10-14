@@ -11,6 +11,7 @@ import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.ndt.common.NdtConstants;
+import com.ruoyi.ndt.customer.mapper.NdtCustomerAccountMapper;
 import com.ruoyi.ndt.task.domain.NdtInspectionTask;
 import com.ruoyi.ndt.task.mapper.NdtInspectionTaskMapper;
 import com.ruoyi.ndt.task.mapper.NdtTaskUserMapper;
@@ -27,9 +28,40 @@ public class NdtAccessService
     @Autowired
     private NdtTaskUserMapper taskUserMapper;
 
+    @Autowired
+    private NdtCustomerAccountMapper customerAccountMapper;
+
+    public boolean isCustomerAccount()
+    {
+        LoginUser user = SecurityUtils.getLoginUser();
+        return customerAccountMapper.selectBindingCustomerId(user.getUserId()) != null
+                || customerAccountMapper.hasCustomerRole(user.getUserId())
+                || hasRole(user, NdtConstants.ROLE_CUSTOMER);
+    }
+
+    public Long getActiveCustomerId()
+    {
+        return customerAccountMapper.selectActiveCustomerId(SecurityUtils.getUserId());
+    }
+
     public void applyTaskListScope(BaseEntity entity)
     {
+        com.github.pagehelper.Page<?> page = com.github.pagehelper.PageHelper.getLocalPage();
+        com.github.pagehelper.PageHelper.clearPage();
+        try { applyScope(entity); }
+        finally { if (page != null) com.github.pagehelper.PageHelper.setLocalPage(page); }
+    }
+
+    private void applyScope(BaseEntity entity)
+    {
         LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (isCustomerAccount())
+        {
+            Long customerId = getActiveCustomerId();
+            entity.getParams().put("scopeType", customerId == null ? "NONE" : "CUSTOMER");
+            entity.getParams().put("scopeCustomerId", customerId);
+            return;
+        }
         if (isSuperAdmin(loginUser) || hasRole(loginUser, NdtConstants.ROLE_COMPANY_ADMIN))
         {
             entity.getParams().put("scopeType", "ALL");
@@ -47,6 +79,11 @@ public class NdtAccessService
             return false;
         }
         LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (isCustomerAccount())
+        {
+            Long customerId = getActiveCustomerId();
+            return customerId != null && customerId.equals(task.getCustomerId());
+        }
         if (isSuperAdmin(loginUser) || hasRole(loginUser, NdtConstants.ROLE_COMPANY_ADMIN))
         {
             return true;
@@ -56,6 +93,7 @@ public class NdtAccessService
 
     public boolean canUploadTask(Long taskId)
     {
+        if (isCustomerAccount()) return false;
         LoginUser loginUser = SecurityUtils.getLoginUser();
         if (isSuperAdmin(loginUser) || hasRole(loginUser, NdtConstants.ROLE_COMPANY_ADMIN))
         {
@@ -66,6 +104,7 @@ public class NdtAccessService
 
     public boolean canEvaluateTask(Long taskId)
     {
+        if (isCustomerAccount()) return false;
         LoginUser loginUser = SecurityUtils.getLoginUser();
         if (isSuperAdmin(loginUser) || hasRole(loginUser, NdtConstants.ROLE_COMPANY_ADMIN))
         {
@@ -76,6 +115,7 @@ public class NdtAccessService
 
     public boolean canManageTask(Long taskId)
     {
+        if (isCustomerAccount()) return false;
         LoginUser loginUser = SecurityUtils.getLoginUser();
         if (isSuperAdmin(loginUser) || hasRole(loginUser, NdtConstants.ROLE_COMPANY_ADMIN))
         {
@@ -88,7 +128,7 @@ public class NdtAccessService
     {
         if (!canViewTask(taskId))
         {
-            throw new ServiceException("无权访问该检测任务");
+            throw new ServiceException("无权访问该检测任务", 403);
         }
     }
 

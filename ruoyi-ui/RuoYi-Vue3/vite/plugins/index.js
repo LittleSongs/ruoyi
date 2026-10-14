@@ -52,7 +52,7 @@ export default function createVitePlugins(viteEnv, isBuild = false) {
                 enabled: false,
                 toggleComboKey: false,
                 toggleButtonVisibility: 'never',
-                launchEditor: 'cursor'
+                launchEditor: 'code'
             }),
             createHoldToInspect()
         )

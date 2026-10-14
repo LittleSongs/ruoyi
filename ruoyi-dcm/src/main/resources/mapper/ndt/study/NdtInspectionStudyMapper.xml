@@ -17,12 +17,17 @@
     <sql id="base">select s.*,w.task_id,w.workpiece_name,
         (select count(1) from ndt_dicom_series ds where ds.study_id=s.id and ds.del_flag='0') series_count,
         (select count(1) from ndt_dicom_object o join ndt_dicom_series ds on ds.id=o.series_id and ds.del_flag='0' where ds.study_id=s.id and o.del_flag='0') object_count
-        from ndt_inspection_study s join ndt_workpiece w on w.id=s.workpiece_id and w.del_flag='0'</sql>
+        from ndt_inspection_study s join ndt_workpiece w on w.id=s.workpiece_id and w.del_flag='0'
+        join ndt_inspection_task vt on vt.id=w.task_id and vt.del_flag='0'
+        join ndt_customer vc on vc.id=vt.customer_id and vc.del_flag='0'</sql>
     <select id="selectList" resultMap="Map"><include refid="base"/><where>s.del_flag='0'
         <if test="workpieceId != null">and s.workpiece_id=#{workpieceId}</if>
         <if test="taskId != null">and w.task_id=#{taskId}</if>
         <if test="inspectionMethodCode != null and inspectionMethodCode != ''">and s.inspection_method_code=#{inspectionMethodCode}</if>
         <if test="studyInstanceUid != null and studyInstanceUid != ''">and s.study_instance_uid=#{studyInstanceUid}</if>
+        <if test="params.scopeType == 'CUSTOMER'">and exists(select 1 from ndt_inspection_task ct
+            join ndt_customer cc on cc.id=ct.customer_id and cc.del_flag='0'
+            where ct.id=w.task_id and ct.customer_id=#{params.scopeCustomerId} and ct.del_flag='0')</if>
         <if test="params.scopeType == 'ASSIGNED'">and exists(select 1 from ndt_task_user tu where tu.task_id=w.task_id and tu.user_id=#{params.scopeUserId} and tu.can_view='1')</if>
         <if test="params.scopeType == 'NONE'">and 1=0</if>
     </where>order by s.create_time desc,s.id desc</select>

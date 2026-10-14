@@ -16,6 +16,6 @@ class NdtPropertiesTest
 
         assertEquals("http://localhost:3000/industrial-viewer?StudyInstanceUIDs=1.2.840"
                 + "&taskId=3&studyId=1&canEvaluate=true"
-                + "&ruoyiApiBase=http%3A%2F%2Flocalhost%3A3000", url);
+                + "&ruoyiApiBase=%2Fndt-api", url);
     }
 }

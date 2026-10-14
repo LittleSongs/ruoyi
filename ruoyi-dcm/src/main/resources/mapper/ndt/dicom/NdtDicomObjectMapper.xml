@@ -31,6 +31,9 @@
         <if test="objectType != null and objectType != ''">and o.object_type=#{objectType}</if>
         <if test="studyUid != null and studyUid != ''">and s.study_instance_uid=#{studyUid}</if>
         <if test="sopInstanceUid != null and sopInstanceUid != ''">and o.sop_instance_uid=#{sopInstanceUid}</if>
+        <if test="params.scopeType == 'CUSTOMER'">and exists(select 1 from ndt_inspection_task ct
+            join ndt_customer cc on cc.id=ct.customer_id and cc.del_flag='0'
+            where ct.id=w.task_id and ct.customer_id=#{params.scopeCustomerId} and ct.del_flag='0')</if>
         <if test="params.scopeType == 'ASSIGNED'">and exists(select 1 from ndt_task_user tu where tu.task_id=w.task_id and tu.user_id=#{params.scopeUserId} and tu.can_view='1')</if>
         <if test="params.scopeType == 'NONE'">and 1=0</if>
     </where>order by o.create_time desc,o.id desc</select>

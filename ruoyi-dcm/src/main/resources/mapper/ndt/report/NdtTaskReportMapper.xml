@@ -16,6 +16,9 @@
         <if test="taskId != null">and r.task_id=#{taskId}</if>
         <if test="status != null and status != ''">and r.status=#{status}</if>
         <if test="reportName != null and reportName != ''">and r.report_name like concat('%',#{reportName},'%')</if>
+        <if test="params.scopeType == 'CUSTOMER'">and exists(select 1 from ndt_inspection_task ct
+            join ndt_customer cc on cc.id=ct.customer_id and cc.del_flag='0'
+            where ct.id=r.task_id and ct.customer_id=#{params.scopeCustomerId} and ct.del_flag='0')</if>
         <if test="params.scopeType == 'ASSIGNED'">and exists(select 1 from ndt_task_user tu where tu.task_id=r.task_id and tu.user_id=#{params.scopeUserId} and tu.can_view='1')</if>
         <if test="params.scopeType == 'NONE'">and 1=0</if>
     </where>order by r.generate_time desc,r.id desc</select>

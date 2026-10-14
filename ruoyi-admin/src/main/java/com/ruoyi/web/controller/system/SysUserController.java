@@ -53,6 +53,9 @@ public class SysUserController extends BaseController
     @Autowired
     private ISysPostService postService;
 
+    @Autowired
+    private com.ruoyi.ndt.customer.mapper.NdtCustomerAccountMapper customerAccounts;
+
     /**
      * 获取用户列表
      */
@@ -60,6 +63,7 @@ public class SysUserController extends BaseController
     @GetMapping("/list")
     public TableDataInfo list(SysUser user)
     {
+        user.getParams().put("excludeCustomerAccounts", true);
         startPage();
         List<SysUser> list = userService.selectUserList(user);
         return getDataTable(list);
@@ -70,6 +74,7 @@ public class SysUserController extends BaseController
     @PostMapping("/export")
     public void export(HttpServletResponse response, SysUser user)
     {
+        user.getParams().put("excludeCustomerAccounts", true);
         List<SysUser> list = userService.selectUserList(user);
         ExcelUtil<SysUser> util = new ExcelUtil<SysUser>(SysUser.class);
         util.exportExcel(response, list, "用户数据");
@@ -124,6 +129,7 @@ public class SysUserController extends BaseController
     @PostMapping
     public AjaxResult add(@Validated @RequestBody SysUser user)
     {
+        checkInternalRoles(user.getRoleIds());
         deptService.checkDeptDataScope(user.getDeptId());
         roleService.checkRoleDataScope(user.getRoleIds());
         if (!userService.checkUserNameUnique(user))
@@ -151,6 +157,8 @@ public class SysUserController extends BaseController
     @PutMapping
     public AjaxResult edit(@Validated @RequestBody SysUser user)
     {
+        checkInternalRoles(user.getRoleIds());
+        checkInternalAccount(user.getUserId());
         userService.checkUserAllowed(user);
         userService.checkUserDataScope(user.getUserId());
         deptService.checkDeptDataScope(user.getDeptId());
@@ -179,6 +187,7 @@ public class SysUserController extends BaseController
     @DeleteMapping("/{userIds}")
     public AjaxResult remove(@PathVariable Long[] userIds)
     {
+        for (Long userId : userIds) checkInternalAccount(userId);
         if (ArrayUtils.contains(userIds, getUserId()))
         {
             return error("当前用户不能删除");
@@ -194,6 +203,7 @@ public class SysUserController extends BaseController
     @PutMapping("/resetPwd")
     public AjaxResult resetPwd(@RequestBody SysUser user)
     {
+        checkInternalAccount(user.getUserId());
         userService.checkUserAllowed(user);
         userService.checkUserDataScope(user.getUserId());
         user.setPassword(SecurityUtils.encryptPassword(user.getPassword()));
@@ -209,6 +219,7 @@ public class SysUserController extends BaseController
     @PutMapping("/changeStatus")
     public AjaxResult changeStatus(@RequestBody SysUser user)
     {
+        checkInternalAccount(user.getUserId());
         userService.checkUserAllowed(user);
         userService.checkUserDataScope(user.getUserId());
         user.setUpdateBy(getUsername());
@@ -238,6 +249,8 @@ public class SysUserController extends BaseController
     @PutMapping("/authRole")
     public AjaxResult insertAuthRole(Long userId, Long[] roleIds)
     {
+        checkInternalRoles(roleIds);
+        checkInternalAccount(userId);
         userService.checkUserDataScope(userId);
         roleService.checkRoleDataScope(roleIds);
         userService.insertUserAuth(userId, roleIds);
@@ -252,5 +265,21 @@ public class SysUserController extends BaseController
     public AjaxResult deptTree(SysDept dept)
     {
         return success(deptService.selectDeptTreeList(dept));
+    }
+    private void checkInternalRoles(Long[] roleIds)
+    {
+        if (roleIds == null) return;
+        for (Long roleId : roleIds)
+        {
+            com.ruoyi.common.core.domain.entity.SysRole role = roleService.selectRoleById(roleId);
+            if (role != null && com.ruoyi.ndt.common.NdtConstants.ROLE_CUSTOMER.equals(role.getRoleKey()))
+                throw new com.ruoyi.common.exception.ServiceException("请在客户公司管理中新增和维护客户账号");
+        }
+    }
+
+    private void checkInternalAccount(Long userId)
+    {
+        if (customerAccounts.selectBindingCustomerId(userId) != null)
+            throw new com.ruoyi.common.exception.ServiceException("请在客户公司管理中维护客户账号");
     }
 }

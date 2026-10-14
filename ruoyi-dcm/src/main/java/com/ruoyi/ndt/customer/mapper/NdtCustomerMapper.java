@@ -10,4 +10,6 @@ public interface NdtCustomerMapper
     int insert(NdtCustomer customer);
     int update(NdtCustomer customer);
     int softDeleteByIds(Long[] ids);
+    NdtCustomer selectByIdForUpdate(Long id);
+    int countReferences(Long id);
 }
